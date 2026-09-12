@@ -59,6 +59,14 @@ Guppy Screen works on Android! Download and try with the latest [APK](https://gi
   
 <img src="https://github.com/ballaswag/guppyscreen/assets/145094472/d0437cd6-9b82-470f-8889-c4a5b74bfa6e" alt="guppyscreen on android" width="600" />
 
+### Runtime path overrides
+
+The following optional environment variables override Guppy Screen's default runtime paths:
+
+- `GUPPYSCREEN_CONFIG`: path to `guppyconfig.json`
+- `GUPPYSCREEN_THEME_DIR`: directory containing theme JSON files
+- `GUPPYSCREEN_INPUT`: Linux evdev device path
+
 ## Uninstall
 ssh into your K1/Max and run the follwow command:
 ```

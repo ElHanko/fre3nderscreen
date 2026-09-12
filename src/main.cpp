@@ -8,6 +8,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <sys/time.h>
+#include <cstdlib>
 #include <experimental/filesystem>
 
 namespace fs = std::experimental::filesystem;
@@ -40,7 +41,10 @@ int main(void)
     spdlog::debug("current path {}", std::string(fs::canonical("/proc/self/exe").parent_path()));
 
     Config *conf = Config::get_instance();
-    auto config_path = fs::canonical("/proc/self/exe").parent_path() / "guppyconfig.json";
+    const char *config_env = std::getenv("GUPPYSCREEN_CONFIG");
+    auto config_path = config_env != NULL && config_env[0] != '\0'
+        ? fs::path(config_env)
+        : fs::canonical("/proc/self/exe").parent_path() / "guppyconfig.json";
     conf->init(config_path.string(), "/usr/data/printer_data/thumbnails");
 
     GuppyScreen::init(hal_init);
@@ -89,7 +93,12 @@ static void hal_init(lv_color_t primary, lv_color_t secondary) {
       : lv_theme_default_init(NULL, primary, secondary, true, &lv_font_montserrat_20);
     lv_disp_set_theme(disp, th);
 
-    evdev_init();
+    const char *input_env = std::getenv("GUPPYSCREEN_INPUT");
+    if (input_env != NULL && input_env[0] != '\0') {
+        evdev_set_file(const_cast<char *>(input_env));
+    } else {
+        evdev_init();
+    }
     static lv_indev_drv_t indev_drv_1;
     lv_indev_drv_init(&indev_drv_1);
     indev_drv_1.read_cb = evdev_read; // no calibration

@@ -20,6 +20,8 @@
  **********************/
 
 static void lv_tc_indev_drv_read_cb(lv_indev_drv_t *indevDrv, lv_indev_data_t *data);
+static lv_point_t lv_tc_transform_point_for_indev(lv_point_t point);
+static lv_point_t lv_tc_unrotate_point(lv_point_t point);
 
 
 /**********************
@@ -147,11 +149,11 @@ lv_point_t _lv_tc_transform_point_indev(lv_indev_data_t *data) {
         // Pressed - just return coordinates
         last_pressed_point = data->point;
         last_state = data->state;
-        return lv_tc_transform_point(data->point);
+        return lv_tc_transform_point_for_indev(data->point);
     } else if(data->state == LV_INDEV_STATE_RELEASED && last_state == LV_INDEV_STATE_PRESSED) {
         // Released - ensure reporting of coordinates where the touch was last seen
         last_state = data->state;
-        return lv_tc_transform_point(last_pressed_point);
+        return lv_tc_transform_point_for_indev(last_pressed_point);
     }
     // Invalid state
     lv_point_t point = {0, 0};
@@ -163,18 +165,39 @@ lv_point_t lv_tc_transform_point(lv_point_t point) {
     if (calibResult.isValid) {
         transformedPoint.x = roundf((lv_tc_val_t)point.x * calibResult.a + (lv_tc_val_t)point.y * calibResult.b + calibResult.c);
         transformedPoint.y = roundf((lv_tc_val_t)point.x * calibResult.d + (lv_tc_val_t)point.y * calibResult.e + calibResult.f);
+    }
 
-        lv_disp_t *disp = lv_disp_get_default();
-        if (disp->driver->rotated == LV_DISP_ROT_90 || disp->driver->rotated == LV_DISP_ROT_270) {
-            lv_coord_t tmp = transformedPoint.y;
-            transformedPoint.y = transformedPoint.x;
-            transformedPoint.x = lv_disp_get_ver_res(NULL) - tmp - 1;
-        }
+    return transformedPoint;
+}
 
-        if (disp->driver->rotated == LV_DISP_ROT_180) {
-            transformedPoint.y = lv_disp_get_ver_res(NULL) - transformedPoint.y;
-            transformedPoint.x = lv_disp_get_hor_res(NULL) - transformedPoint.x;
-        }
+static lv_point_t lv_tc_transform_point_for_indev(lv_point_t point) {
+    lv_point_t transformedPoint = lv_tc_transform_point(point);
+    return calibResult.isValid ? lv_tc_unrotate_point(transformedPoint) : transformedPoint;
+}
+
+static lv_point_t lv_tc_unrotate_point(lv_point_t point) {
+    lv_disp_t *disp = lv_disp_get_default();
+    lv_point_t transformedPoint = point;
+    const lv_coord_t x = point.x;
+    const lv_coord_t y = point.y;
+
+    // LVGL rotates pointer coordinates after the input driver's read callback,
+    // so return the inverse rotation here.
+    switch (disp->driver->rotated) {
+        case LV_DISP_ROT_NONE:
+            break;
+        case LV_DISP_ROT_90:
+            transformedPoint.x = y;
+            transformedPoint.y = lv_disp_get_hor_res(NULL) - x - 1;
+            break;
+        case LV_DISP_ROT_180:
+            transformedPoint.x = lv_disp_get_hor_res(NULL) - x - 1;
+            transformedPoint.y = lv_disp_get_ver_res(NULL) - y - 1;
+            break;
+        case LV_DISP_ROT_270:
+            transformedPoint.x = lv_disp_get_ver_res(NULL) - y - 1;
+            transformedPoint.y = x;
+            break;
     }
 
     return transformedPoint;

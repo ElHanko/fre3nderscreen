@@ -14,6 +14,8 @@
 
 #include "printer_select_panel.h"
 #include "spdlog/spdlog.h"
+
+#include <cstdlib>
 #include "state.h"
 #include "theme.h"
 
@@ -62,7 +64,11 @@ GuppyScreen *GuppyScreen::init(std::function<void(lv_color_t, lv_color_t)> hal_i
   auto selected_theme = conf->get_json("/theme").empty()
           ? "blue.json"
           : conf->get<std::string>("/theme") + ".json";
-  auto theme_config = fs::canonical(conf->get_path()).parent_path() / "themes" / selected_theme;
+  const char *theme_dir_env = std::getenv("GUPPYSCREEN_THEME_DIR");
+  auto theme_dir = theme_dir_env != NULL && theme_dir_env[0] != '\0'
+      ? fs::path(theme_dir_env)
+      : fs::canonical(conf->get_path()).parent_path() / "themes";
+  auto theme_config = theme_dir / selected_theme;
 
   ThemeConfig *theme_conf = ThemeConfig::get_instance();
   theme_conf->init(theme_config);
