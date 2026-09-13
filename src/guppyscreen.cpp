@@ -16,6 +16,10 @@
 #include "spdlog/spdlog.h"
 
 #include <cstdlib>
+#if !defined(SIMULATOR) && !defined(OS_ANDROID)
+  #include <fcntl.h>
+  #include <unistd.h>
+#endif
 #include "state.h"
 #include "theme.h"
 
@@ -28,6 +32,29 @@ lv_theme_t GuppyScreen::th_new;
 
 #ifndef OS_ANDROID
 lv_obj_t *GuppyScreen::screen_saver = NULL;
+#endif
+
+#if !defined(SIMULATOR) && !defined(OS_ANDROID)
+namespace {
+
+bool set_backlight_power(const char *path, char value) {
+  if (path == NULL || path[0] == '\0') {
+    return true;
+  }
+
+  int fd = open(path, O_WRONLY | O_CLOEXEC);
+  if (fd < 0) {
+    return false;
+  }
+
+  const char data[] = {value, '\n'};
+  ssize_t written = write(fd, data, sizeof(data));
+  close(fd);
+
+  return written == static_cast<ssize_t>(sizeof(data));
+}
+
+}
 #endif
 
 KWebSocketClient GuppyScreen::ws(NULL);
@@ -163,6 +190,8 @@ GuppyScreen *GuppyScreen::init(std::function<void(lv_color_t, lv_color_t)> hal_i
 
   lv_obj_set_size(screen_saver, LV_PCT(100), LV_PCT(100));
   lv_obj_set_style_bg_opa(screen_saver, LV_OPA_100, 0);
+  lv_obj_add_flag(screen_saver, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_clear_flag(screen_saver, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_move_background(screen_saver);
 
   lv_obj_t *main_screen = lv_disp_get_scr_act(NULL);
@@ -200,6 +229,27 @@ void GuppyScreen::loop() {
   std::atomic_bool is_sleeping(false);
   Config *conf = Config::get_instance();
   int32_t display_sleep = conf->get<int32_t>("/display_sleep_sec") * 1000;
+
+  const char *display_sleep_override =
+      std::getenv("GUPPYSCREEN_DISPLAY_SLEEP_SEC");
+  if (display_sleep_override != NULL && display_sleep_override[0] != '\0') {
+    char *end = NULL;
+    long seconds = std::strtol(display_sleep_override, &end, 10);
+
+    if (end != display_sleep_override &&
+        *end == '\0' &&
+        seconds >= 0 &&
+        seconds <= 2147483L) {
+      display_sleep = static_cast<int32_t>(seconds * 1000);
+      spdlog::info("display sleep override: {} seconds", seconds);
+    } else {
+      spdlog::warn(
+          "ignoring invalid GUPPYSCREEN_DISPLAY_SLEEP_SEC={}",
+          display_sleep_override);
+    }
+  }
+
+  const char *backlight_power = std::getenv("GUPPYSCREEN_BACKLIGHT_POWER");
 #endif
 
   while (1) {
@@ -212,15 +262,20 @@ void GuppyScreen::loop() {
       if (lv_disp_get_inactive_time(NULL) > display_sleep) {
         if (!is_sleeping.load()) {
           spdlog::debug("putting display to sleeping");
-          fbdev_blank();
           lv_obj_move_foreground(screen_saver);
-          // spdlog::debug("screen saver foreground");
+          if (!set_backlight_power(backlight_power, '4')) {
+            spdlog::warn("cannot disable display backlight");
+          }
+          fbdev_blank();
           is_sleeping = true;
         }
       } else {
         if (is_sleeping.load()) {
           spdlog::debug("waking up display");
           fbdev_unblank();
+          if (!set_backlight_power(backlight_power, '0')) {
+            spdlog::warn("cannot enable display backlight");
+          }
           lv_obj_move_background(screen_saver);
           is_sleeping = false;
         }

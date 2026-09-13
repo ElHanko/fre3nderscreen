@@ -28,6 +28,7 @@ static void hal_init(lv_color_t p, lv_color_t s);
 #include "guppyscreen.h"
 #include "hv/hlog.h"
 #include "config.h"
+#include "touch_beep.h"
 
 #include <algorithm>
 
@@ -113,6 +114,10 @@ static void hal_init(lv_color_t primary, lv_color_t secondary) {
       }
     }
       
+    const char *beeper_input = std::getenv("GUPPYSCREEN_BEEPER_INPUT");
+    TouchBeep::init(beeper_input);
+    indev_drv_1.feedback_cb = TouchBeep::feedback_cb;
+
     lv_indev_drv_register(&indev_drv_1);
 }
 
