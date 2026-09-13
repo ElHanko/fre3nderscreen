@@ -1,6 +1,7 @@
 #include "macros_panel.h"
 #include "state.h"
 #include "utils.h"
+#include "ui_layout.h"
 #include "spdlog/spdlog.h"
 
 MacrosPanel::MacrosPanel(KWebSocketClient &c, std::mutex &l, lv_obj_t *parent)
@@ -34,6 +35,15 @@ MacrosPanel::MacrosPanel(KWebSocketClient &c, std::mutex &l, lv_obj_t *parent)
   
   lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
   lv_obj_set_style_text_font(kb, &lv_font_montserrat_16, LV_STATE_DEFAULT);
+
+  if (UiLayout::compact_portrait()) {
+    lv_obj_clear_flag(top_controls, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_pad_all(top_controls, 4, 0);
+
+    lv_obj_set_scroll_dir(top_cont, LV_DIR_VER);
+    lv_obj_set_scrollbar_mode(top_cont, LV_SCROLLBAR_MODE_AUTO);
+    lv_obj_set_style_pad_row(top_cont, 0, 0);
+  }
 }
 
 MacrosPanel::~MacrosPanel()

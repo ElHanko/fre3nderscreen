@@ -1,4 +1,5 @@
 #include "macro_item.h"
+#include "ui_layout.h"
 #include "spdlog/spdlog.h"
 
 MacroItem::MacroItem(KWebSocketClient &c,
@@ -31,8 +32,21 @@ MacroItem::MacroItem(KWebSocketClient &c,
   // lv_obj_set_style_bg_opa(top_cont, LV_OPA_COVER, 0);
   lv_obj_set_style_pad_all(top_cont, 0, 0);
   
-  lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_ROW_WRAP);
-  lv_obj_set_flex_align(cont, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  if (UiLayout::compact_portrait()) {
+    lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(
+        cont,
+        LV_FLEX_ALIGN_START,
+        LV_FLEX_ALIGN_CENTER,
+        LV_FLEX_ALIGN_CENTER);
+  } else {
+    lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_ROW_WRAP);
+    lv_obj_set_flex_align(
+        cont,
+        LV_FLEX_ALIGN_SPACE_EVENLY,
+        LV_FLEX_ALIGN_CENTER,
+        LV_FLEX_ALIGN_CENTER);
+  }
 
   lv_obj_set_style_border_side(cont, LV_BORDER_SIDE_TOP, LV_PART_MAIN);  
 
@@ -67,13 +81,74 @@ MacroItem::MacroItem(KWebSocketClient &c,
   lv_obj_center(run_btn_label);
   lv_obj_add_event_cb(run_btn , &MacroItem::_handle_send_macro, LV_EVENT_CLICKED, this);
 
+  if (UiLayout::compact_portrait()) {
+    static lv_coord_t compact_col_dsc[] = {
+      42,
+      LV_GRID_FR(1),
+      54,
+      LV_GRID_TEMPLATE_LAST
+    };
+    static lv_coord_t compact_row_dsc[] = {
+      48,
+      LV_GRID_TEMPLATE_LAST
+    };
+
+    lv_obj_set_height(top_cont, 48);
+    lv_obj_set_grid_dsc_array(
+        top_cont,
+        compact_col_dsc,
+        compact_row_dsc);
+
+    lv_obj_set_grid_cell(
+        hide_show_cont,
+        LV_GRID_ALIGN_STRETCH,
+        0,
+        1,
+        LV_GRID_ALIGN_STRETCH,
+        0,
+        1);
+
+    lv_obj_set_grid_cell(
+        macro_label,
+        LV_GRID_ALIGN_STRETCH,
+        1,
+        1,
+        LV_GRID_ALIGN_CENTER,
+        0,
+        1);
+
+    lv_obj_set_grid_cell(
+        run_btn,
+        LV_GRID_ALIGN_CENTER,
+        2,
+        1,
+        LV_GRID_ALIGN_CENTER,
+        0,
+        1);
+
+    lv_obj_set_style_pad_all(top_cont, 2, 0);
+
+    lv_obj_set_size(hide_show_cont, LV_PCT(100), LV_PCT(100));
+
+    lv_label_set_long_mode(macro_label, LV_LABEL_LONG_DOT);
+    lv_obj_set_width(macro_label, LV_PCT(100));
+    lv_obj_set_height(macro_label, 24);
+
+    lv_obj_set_width(run_btn, 48);
+    lv_obj_set_height(run_btn, 40);
+  }
+
 
   if (!m_params.empty()) {
     lv_obj_t *params_cont = lv_obj_create(cont);
     // lv_obj_set_style_bg_color(params_cont, bg_color, 0);  
     // lv_obj_set_style_bg_opa(params_cont, LV_OPA_COVER, 0);
     
-    lv_obj_set_size(params_cont, LV_PCT(70), LV_SIZE_CONTENT);
+    if (UiLayout::compact_portrait()) {
+      lv_obj_set_size(params_cont, LV_PCT(100), LV_SIZE_CONTENT);
+    } else {
+      lv_obj_set_size(params_cont, LV_PCT(70), LV_SIZE_CONTENT);
+    }
 
     lv_obj_set_flex_flow(params_cont, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_flex_align(params_cont, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
@@ -92,8 +167,13 @@ MacroItem::MacroItem(KWebSocketClient &c,
       lv_obj_clear_flag(param_value, LV_OBJ_FLAG_SCROLLABLE);
       lv_obj_add_event_cb(param_value, &MacroItem::_handle_kb_input, LV_EVENT_ALL, this);
 
-      lv_obj_set_width(param_name, LV_PCT(30));
-      lv_obj_set_width(param_value, LV_PCT(45));
+      if (UiLayout::compact_portrait()) {
+        lv_obj_set_width(param_name, LV_PCT(40));
+        lv_obj_set_width(param_value, LV_PCT(55));
+      } else {
+        lv_obj_set_width(param_name, LV_PCT(30));
+        lv_obj_set_width(param_value, LV_PCT(45));
+      }
 
       params.push_back({param_name, param_value});
     }

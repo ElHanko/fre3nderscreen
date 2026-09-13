@@ -1,5 +1,6 @@
 #include "main_panel.h"
 #include "state.h"
+#include "ui_layout.h"
 #include "lvgl/lvgl.h"
 #include "spdlog/spdlog.h"
 
@@ -29,7 +30,7 @@ MainPanel::MainPanel(KWebSocketClient &websocket,
   , homing_panel(ws, lock)
   , fan_panel(ws, lock)
   , led_panel(ws, lock)    
-  , tabview(lv_tabview_create(lv_scr_act(), LV_DIR_LEFT, 60))
+  , tabview(lv_tabview_create(lv_scr_act(), LV_DIR_LEFT, UiLayout::tab_bar_width()))
   , main_tab(lv_tabview_add_tab(tabview, HOME_SYMBOL))
   , macros_tab(lv_tabview_add_tab(tabview, MACROS_SYMBOL))
   , macros_panel(ws, lock, macros_tab)
@@ -143,6 +144,10 @@ void MainPanel::create_panel() {
   lv_obj_set_style_border_side(tab_btns, 0, LV_PART_ITEMS | LV_STATE_CHECKED);
   lv_obj_set_style_text_font(tab_btns, &materialdesign_font_40, LV_STATE_DEFAULT);
 
+  if (UiLayout::compact_portrait()) {
+    lv_obj_set_style_pad_all(tab_btns, 0, 0);
+  }
+
   // lv_obj_set_style_text_font(lv_scr_act(), LV_FONT_DEFAULT, 0);
 
   lv_obj_set_style_pad_all(main_tab, 0, 0);
@@ -195,36 +200,179 @@ void MainPanel::create_main(lv_obj_t * parent)
 {
     lv_obj_set_flex_flow(parent, LV_FLEX_FLOW_ROW_WRAP);
 
-    static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-    static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1),
-      LV_GRID_TEMPLATE_LAST};
-
     lv_obj_clear_flag(main_cont, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_height(main_cont, LV_PCT(100));
-
     lv_obj_set_flex_grow(main_cont, 1);
-    lv_obj_set_grid_dsc_array(main_cont, grid_main_col_dsc, grid_main_row_dsc);    
-
-    lv_obj_set_grid_cell(homing_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-    lv_obj_set_grid_cell(extrude_btn.get_container(), LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-    lv_obj_set_grid_cell(action_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-    lv_obj_set_grid_cell(led_btn.get_container(), LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-    lv_obj_set_grid_cell(print_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 2, LV_GRID_ALIGN_CENTER, 2, 1);
 
     lv_obj_clear_flag(temp_cont, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_size(temp_cont, LV_PCT(50), LV_PCT(50));
     lv_obj_set_style_pad_all(temp_cont, 0, 0);
-
     lv_obj_set_flex_flow(temp_cont, LV_FLEX_FLOW_ROW_WRAP);
-    lv_obj_set_grid_cell(temp_cont, LV_GRID_ALIGN_START, 0, 2, LV_GRID_ALIGN_CENTER, 0, 2);
-    
+
+    if (UiLayout::compact_portrait()) {
+      lv_obj_set_flex_flow(temp_cont, LV_FLEX_FLOW_COLUMN);
+      lv_obj_set_flex_align(
+          temp_cont,
+          LV_FLEX_ALIGN_CENTER,
+          LV_FLEX_ALIGN_CENTER,
+          LV_FLEX_ALIGN_CENTER);
+      lv_obj_set_style_pad_row(temp_cont, 4, 0);
+
+      /*
+       * Compact portrait layout, e.g. Fre3nder's logical 272x480 display.
+       *
+       * Temperatures
+       * Chart
+       * Homing    Extrude
+       * Fans      LED
+       *     Print
+       */
+      static lv_coord_t grid_main_row_dsc[] = {
+        LV_GRID_FR(1),
+        LV_GRID_FR(1),
+        LV_GRID_FR(1),
+        LV_GRID_FR(1),
+        LV_GRID_FR(1),
+        LV_GRID_TEMPLATE_LAST
+      };
+      static lv_coord_t grid_main_col_dsc[] = {
+        LV_GRID_FR(1),
+        LV_GRID_FR(1),
+        LV_GRID_TEMPLATE_LAST
+      };
+
+      lv_obj_set_grid_dsc_array(
+          main_cont,
+          grid_main_col_dsc,
+          grid_main_row_dsc);
+
+      /*
+       * Let the grid own the compact geometry. Avoid fixed widths here:
+       * the same layout should remain usable on other narrow portrait
+       * displays instead of being tuned only for exactly 272 pixels.
+       */
+      lv_obj_set_grid_cell(
+          temp_cont,
+          LV_GRID_ALIGN_STRETCH, 0, 2,
+          LV_GRID_ALIGN_STRETCH, 0, 1);
+
+      lv_obj_set_grid_cell(
+          temp_chart,
+          LV_GRID_ALIGN_STRETCH, 0, 2,
+          LV_GRID_ALIGN_STRETCH, 1, 1);
+
+      lv_obj_set_grid_cell(
+          homing_btn.get_container(),
+          LV_GRID_ALIGN_STRETCH, 0, 1,
+          LV_GRID_ALIGN_CENTER, 2, 1);
+
+      lv_obj_set_grid_cell(
+          extrude_btn.get_container(),
+          LV_GRID_ALIGN_STRETCH, 1, 1,
+          LV_GRID_ALIGN_CENTER, 2, 1);
+
+      lv_obj_set_grid_cell(
+          action_btn.get_container(),
+          LV_GRID_ALIGN_STRETCH, 0, 1,
+          LV_GRID_ALIGN_CENTER, 3, 1);
+
+      lv_obj_set_grid_cell(
+          led_btn.get_container(),
+          LV_GRID_ALIGN_STRETCH, 1, 1,
+          LV_GRID_ALIGN_CENTER, 3, 1);
+
+      lv_obj_set_grid_cell(
+          print_btn.get_container(),
+          LV_GRID_ALIGN_STRETCH, 0, 2,
+          LV_GRID_ALIGN_CENTER, 4, 1);
+
+    } else {
+      static lv_coord_t grid_main_row_dsc[] = {
+        LV_GRID_FR(1),
+        LV_GRID_FR(1),
+        LV_GRID_FR(1),
+        LV_GRID_TEMPLATE_LAST
+      };
+      static lv_coord_t grid_main_col_dsc[] = {
+        LV_GRID_FR(1),
+        LV_GRID_FR(1),
+        LV_GRID_FR(1),
+        LV_GRID_FR(1),
+        LV_GRID_TEMPLATE_LAST
+      };
+
+      lv_obj_set_grid_dsc_array(
+          main_cont,
+          grid_main_col_dsc,
+          grid_main_row_dsc);
+
+      lv_obj_set_grid_cell(
+          homing_btn.get_container(),
+          LV_GRID_ALIGN_CENTER, 2, 1,
+          LV_GRID_ALIGN_CENTER, 0, 1);
+
+      lv_obj_set_grid_cell(
+          extrude_btn.get_container(),
+          LV_GRID_ALIGN_CENTER, 3, 1,
+          LV_GRID_ALIGN_CENTER, 0, 1);
+
+      lv_obj_set_grid_cell(
+          action_btn.get_container(),
+          LV_GRID_ALIGN_CENTER, 2, 1,
+          LV_GRID_ALIGN_CENTER, 1, 1);
+
+      lv_obj_set_grid_cell(
+          led_btn.get_container(),
+          LV_GRID_ALIGN_CENTER, 3, 1,
+          LV_GRID_ALIGN_CENTER, 1, 1);
+
+      lv_obj_set_grid_cell(
+          print_btn.get_container(),
+          LV_GRID_ALIGN_CENTER, 2, 2,
+          LV_GRID_ALIGN_CENTER, 2, 1);
+
+      lv_obj_set_size(temp_cont, LV_PCT(50), LV_PCT(50));
+      lv_obj_set_grid_cell(
+          temp_cont,
+          LV_GRID_ALIGN_START, 0, 2,
+          LV_GRID_ALIGN_CENTER, 0, 2);
+
+      lv_obj_set_size(temp_chart, LV_PCT(45), LV_PCT(40));
+      lv_obj_set_grid_cell(
+          temp_chart,
+          LV_GRID_ALIGN_END, 0, 2,
+          LV_GRID_ALIGN_END, 2, 1);
+    }
+
     lv_obj_align(temp_chart, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_size(temp_chart, LV_PCT(45), LV_PCT(40));
     lv_obj_set_style_size(temp_chart, 0, LV_PART_INDICATOR);
 
-    lv_chart_set_range(temp_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 300);
-    lv_obj_set_grid_cell(temp_chart, LV_GRID_ALIGN_END, 0, 2, LV_GRID_ALIGN_END, 2, 1);
-    lv_chart_set_axis_tick(temp_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 0, 6, 5, true, 50);
+    lv_chart_set_range(
+        temp_chart,
+        LV_CHART_AXIS_PRIMARY_Y,
+        0,
+        300);
+
+    if (UiLayout::compact_portrait()) {
+      lv_chart_set_axis_tick(
+          temp_chart,
+          LV_CHART_AXIS_PRIMARY_Y,
+          0,
+          0,
+          4,
+          2,
+          false,
+          0);
+    } else {
+      lv_chart_set_axis_tick(
+          temp_chart,
+          LV_CHART_AXIS_PRIMARY_Y,
+          0,
+          0,
+          6,
+          5,
+          true,
+          50);
+    }
 
     lv_chart_set_div_line_count(temp_chart, 3, 8);
     lv_chart_set_point_count(temp_chart, 5000);
@@ -265,9 +413,16 @@ void MainPanel::create_sensors(json &temp_sensors) {
     lv_chart_series_t *temp_series =
       lv_chart_add_series(temp_chart, color_code, LV_CHART_AXIS_PRIMARY_Y);
 
-    sensors.insert({key, std::make_shared<SensorContainer>(ws, temp_cont, sensor_img, 150,
-			   display_name.c_str(), color_code, controllable, false, numpad, key,
-        		   temp_chart, temp_series)});
+    auto sensor_widget = std::make_shared<SensorContainer>(
+        ws, temp_cont, sensor_img, 150,
+        display_name.c_str(), color_code, controllable, false,
+        numpad, key, temp_chart, temp_series);
+
+    if (UiLayout::compact_portrait()) {
+      sensor_widget->use_compact_layout();
+    }
+
+    sensors.insert({key, sensor_widget});
   }
 }
 

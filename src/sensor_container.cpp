@@ -115,6 +115,54 @@ lv_obj_t *SensorContainer::get_sensor() {
   return sensor_cont;
 }
 
+void SensorContainer::use_compact_layout()
+{
+  lv_obj_set_size(sensor_cont, LV_PCT(100), 36);
+  lv_obj_set_style_pad_all(sensor_cont, 0, 0);
+
+  lv_obj_align(sensor_img, LV_ALIGN_LEFT_MID, 4, 0);
+
+  lv_obj_set_width(sensor_label, 74);
+  lv_label_set_long_mode(sensor_label, LV_LABEL_LONG_DOT);
+  lv_obj_align_to(
+      sensor_label,
+      sensor_img,
+      LV_ALIGN_OUT_RIGHT_MID,
+      4,
+      0);
+
+  lv_obj_set_style_pad_all(value_label, 0, 0);
+  lv_obj_set_style_pad_all(divider_label, 0, 0);
+  lv_obj_set_style_pad_all(target_label, 0, 0);
+
+  lv_obj_set_style_text_align(
+      value_label,
+      LV_TEXT_ALIGN_RIGHT,
+      0);
+  lv_obj_set_style_text_align(
+      divider_label,
+      LV_TEXT_ALIGN_CENTER,
+      0);
+  lv_obj_set_style_text_align(
+      target_label,
+      LV_TEXT_ALIGN_CENTER,
+      0);
+
+  if (!lv_obj_has_flag(target_label, LV_OBJ_FLAG_HIDDEN)) {
+    lv_obj_set_width(value_label, 32);
+    lv_obj_align(value_label, LV_ALIGN_RIGHT_MID, -52, 0);
+
+    lv_obj_set_width(divider_label, 12);
+    lv_obj_align(divider_label, LV_ALIGN_RIGHT_MID, -38, 0);
+
+    lv_obj_set_width(target_label, 36);
+    lv_obj_align(target_label, LV_ALIGN_RIGHT_MID, -2, 0);
+  } else {
+    lv_obj_set_width(value_label, 40);
+    lv_obj_align(value_label, LV_ALIGN_RIGHT_MID, -4, 0);
+  }
+}
+
 void SensorContainer::update_target(int new_target) {
   if (new_target >= 0) {
     target = new_target;
