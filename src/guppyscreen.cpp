@@ -91,7 +91,7 @@ GuppyScreen *GuppyScreen::init(std::function<void(lv_color_t, lv_color_t)> hal_i
   auto selected_theme = conf->get_json("/theme").empty()
           ? "blue.json"
           : conf->get<std::string>("/theme") + ".json";
-  const char *theme_dir_env = std::getenv("GUPPYSCREEN_THEME_DIR");
+  const char *theme_dir_env = std::getenv("FRE3NDERSCREEN_THEME_DIR");
   auto theme_dir = theme_dir_env != NULL && theme_dir_env[0] != '\0'
       ? fs::path(theme_dir_env)
       : fs::canonical(conf->get_path()).parent_path() / "themes";
@@ -119,16 +119,16 @@ GuppyScreen *GuppyScreen::init(std::function<void(lv_color_t, lv_color_t)> hal_i
   spdlog::sinks_init_list log_sinks{android_sink};
 #endif  // OS_ANDROID
 
-  auto klogger = std::make_shared<spdlog::logger>("guppyscreen", log_sinks);
+  auto klogger = std::make_shared<spdlog::logger>("fre3nderscreen", log_sinks);
   spdlog::register_logger(klogger);
 
   spdlog::set_level(ll);
   spdlog::set_default_logger(klogger);
   klogger->flush_on(ll);
 
-#ifdef GUPPYSCREEN_VERSION
-  spdlog::info("Guppy Screen Version: {}", GUPPYSCREEN_VERSION);
-#endif  // GUPPYSCREEN_VERSION
+#ifdef FRE3NDERSCREEN_VERSION
+  spdlog::info("Fre3nderScreen Version: {}", FRE3NDERSCREEN_VERSION);
+#endif  // FRE3NDERSCREEN_VERSION
 
   spdlog::info("DPI: {}", LV_DPI_DEF);
   /*LittlevGL init*/
@@ -194,6 +194,7 @@ GuppyScreen *GuppyScreen::init(std::function<void(lv_color_t, lv_color_t)> hal_i
   lv_obj_clear_flag(screen_saver, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_move_background(screen_saver);
 
+#ifndef SIMULATOR
   lv_obj_t *main_screen = lv_disp_get_scr_act(NULL);
   auto touch_calibrated = conf->get_json("/touch_calibrated");
   if (!touch_calibrated.is_null()) {
@@ -218,6 +219,8 @@ GuppyScreen *GuppyScreen::init(std::function<void(lv_color_t, lv_color_t)> hal_i
       }
     }
   }
+#endif // SIMULATOR
+
 #endif // OS_ANDROID
 
   return gs;
@@ -231,7 +234,7 @@ void GuppyScreen::loop() {
   int32_t display_sleep = conf->get<int32_t>("/display_sleep_sec") * 1000;
 
   const char *display_sleep_override =
-      std::getenv("GUPPYSCREEN_DISPLAY_SLEEP_SEC");
+      std::getenv("FRE3NDERSCREEN_DISPLAY_SLEEP_SEC");
   if (display_sleep_override != NULL && display_sleep_override[0] != '\0') {
     char *end = NULL;
     long seconds = std::strtol(display_sleep_override, &end, 10);
@@ -244,12 +247,12 @@ void GuppyScreen::loop() {
       spdlog::info("display sleep override: {} seconds", seconds);
     } else {
       spdlog::warn(
-          "ignoring invalid GUPPYSCREEN_DISPLAY_SLEEP_SEC={}",
+          "ignoring invalid FRE3NDERSCREEN_DISPLAY_SLEEP_SEC={}",
           display_sleep_override);
     }
   }
 
-  const char *backlight_power = std::getenv("GUPPYSCREEN_BACKLIGHT_POWER");
+  const char *backlight_power = std::getenv("FRE3NDERSCREEN_BACKLIGHT_POWER");
 #endif
 
   while (1) {

@@ -15,8 +15,8 @@ namespace fs = std::experimental::filesystem;
 
 LV_IMG_DECLARE(back);
 
-#ifdef GUPPYSCREEN_VERSION
-#define GS_VERSION GUPPYSCREEN_VERSION
+#ifdef FRE3NDERSCREEN_VERSION
+#define GS_VERSION FRE3NDERSCREEN_VERSION
 #else
 #define GS_VERSION "dev-snapshot"
 #endif
@@ -241,7 +241,7 @@ void SysInfoPanel::foreground() {
     auto ip = KUtils::interface_ip(iface);
     network_detail.push_back(fmt::format("\t{}: {}", iface, ip));
   }
-  lv_label_set_text(network_label, fmt::format("{}\n\nGuppyScreen\n\tVersion: " GS_VERSION,
+  lv_label_set_text(network_label, fmt::format("{}\n\nFre3nderScreen\n\tVersion: " GS_VERSION,
 					       fmt::join(network_detail, "\n")).c_str());
 }
 

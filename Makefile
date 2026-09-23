@@ -23,8 +23,12 @@ WARNINGS		:= -Wall -Wextra -Wno-unused-function -Wno-error=strict-prototypes -Wp
 					-Wno-missing-field-initializers -Wtype-limits -Wsizeof-pointer-memaccess -Wno-format-nonliteral -Wpointer-arith -Wno-cast-qual \
 					-Wunreachable-code -Wno-switch-default -Wreturn-type -Wmultichar -Wformat-security -Wno-sign-compare
 CFLAGS 			?= -O3 -g0 -MD -MP -I$(LVGL_DIR)/ $(WARNINGS) 
+ifdef CROSS_COMPILE
 LDFLAGS 		?= -static -lm -Llibhv/lib -Lspdlog/build -l:libhv.a -latomic -lpthread -Lwpa_supplicant/wpa_supplicant/ -l:libwpa_client.a -lstdc++fs -l:libspdlog.a
-BIN 			= guppyscreen
+else
+LDFLAGS 		?= -lm -Llibhv/lib -Lspdlog/build -l:libhv.a -latomic -lpthread -Lwpa_supplicant/wpa_supplicant/ -l:libwpa_client.a -lstdc++fs -l:libspdlog.a
+endif
+BIN 			= fre3nderscreen
 BUILD_DIR 		= ./build
 BUILD_OBJ_DIR 	= $(BUILD_DIR)/obj
 BUILD_BIN_DIR 	= $(BUILD_DIR)/bin
@@ -40,7 +44,9 @@ include $(LVGL_DIR)/lvgl/lvgl.mk
 include $(LVGL_DIR)/lv_drivers/lv_drivers.mk
 
 CSRCS 			+= $(wildcard $(LVGL_DIR)/assets/*.c)
+ifdef CROSS_COMPILE
 CSRCS			+= $(wildcard $(LVGL_DIR)/lv_touch_calibration/*.c)
+endif
 
 ASSET_DIR		= material
 ifdef GUPPY_SMALL_SCREEN
@@ -61,8 +67,8 @@ else
 CSRCS 			+= $(wildcard $(LVGL_DIR)/assets/$(ASSET_DIR)/*.c)
 endif
 
-ifdef GUPPYSCREEN_VERSION
-DEFINES			+= -D GUPPYSCREEN_VERSION="\"${GUPPYSCREEN_VERSION}\""
+ifdef FRE3NDERSCREEN_VERSION
+DEFINES			+= -D FRE3NDERSCREEN_VERSION="\"${FRE3NDERSCREEN_VERSION}\""
 endif
 
 OBJEXT 			?= .o

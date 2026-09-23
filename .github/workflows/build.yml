@@ -1,4 +1,4 @@
-name: guppy build
+name: fre3nderscreen build
 
 on:
   push:
@@ -19,28 +19,28 @@ jobs:
             small: false
             rotate: true
             calibrate: false
-            asset: guppyscreen-zbolt
+            asset: fre3nderscreen-zbolt
 
           - arch: mipsel-buildroot-linux-musl-
             theme: material
             small: false
             rotate: true
             calibrate: false
-            asset: guppyscreen
+            asset: fre3nderscreen
 
           - arch: mipsel-buildroot-linux-musl-
             theme: material
             small: true
             rotate: false
             calibrate: true
-            asset: guppyscreen-smallscreen
+            asset: fre3nderscreen-smallscreen
 
           - arch: aarch64-none-linux-gnu-
             theme: material
             small: false
             rotate: false
             calibrate: true
-            asset: guppyscreen-arm
+            asset: fre3nderscreen-arm
 
     runs-on: ubuntu-22.04
     container:
@@ -59,14 +59,14 @@ jobs:
         submodules: recursive
 
     - if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
-      name: set guppyscreen nightly version
+      name: set fre3nderscreen version
       run: |
-        echo "GUPPYSCREEN_VERSION=nightly-${{ github.sha }}" >> $GITHUB_ENV
+        echo "FRE3NDERSCREEN_VERSION=nightly-${{ github.sha }}" >> $GITHUB_ENV
 
     - if: startsWith(github.ref, 'refs/tags/')
-      name: set guppyscreen nightly version
+      name: set fre3nderscreen version
       run: |
-        echo "GUPPYSCREEN_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+        echo "FRE3NDERSCREEN_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
 
     - if: matrix.small
       name: export screen size
@@ -107,7 +107,7 @@ jobs:
     - name: make libspdlog
       run: make libspdlog.a
 
-    - name: make guppyscreen
+    - name: make fre3nderscreen
       run: make -j
 
     - name: make kd_graphic_mode

@@ -586,8 +586,13 @@
 
 #if USE_SDL || USE_SDL_GPU
     #ifdef GUPPY_SMALL_SCREEN
-      #  define SDL_HOR_RES     480
-      #  define SDL_VER_RES     272
+      #ifdef GUPPY_ROTATE
+        #define SDL_HOR_RES     272
+        #define SDL_VER_RES     480
+      #else
+        #define SDL_HOR_RES     480
+        #define SDL_VER_RES     272
+      #endif
     #else
       #  define SDL_HOR_RES     800
       #  define SDL_VER_RES     480

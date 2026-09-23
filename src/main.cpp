@@ -42,10 +42,10 @@ int main(void)
     spdlog::debug("current path {}", std::string(fs::canonical("/proc/self/exe").parent_path()));
 
     Config *conf = Config::get_instance();
-    const char *config_env = std::getenv("GUPPYSCREEN_CONFIG");
+    const char *config_env = std::getenv("FRE3NDERSCREEN_CONFIG");
     auto config_path = config_env != NULL && config_env[0] != '\0'
         ? fs::path(config_env)
-        : fs::canonical("/proc/self/exe").parent_path() / "guppyconfig.json";
+        : fs::canonical("/proc/self/exe").parent_path() / "fre3nderscreen.json";
     conf->init(config_path.string(), "/usr/data/printer_data/thumbnails");
 
     GuppyScreen::init(hal_init);
@@ -94,7 +94,7 @@ static void hal_init(lv_color_t primary, lv_color_t secondary) {
       : lv_theme_default_init(NULL, primary, secondary, true, &lv_font_montserrat_20);
     lv_disp_set_theme(disp, th);
 
-    const char *input_env = std::getenv("GUPPYSCREEN_INPUT");
+    const char *input_env = std::getenv("FRE3NDERSCREEN_INPUT");
     if (input_env != NULL && input_env[0] != '\0') {
         evdev_set_file(const_cast<char *>(input_env));
     } else {
@@ -114,7 +114,7 @@ static void hal_init(lv_color_t primary, lv_color_t secondary) {
       }
     }
       
-    const char *beeper_input = std::getenv("GUPPYSCREEN_BEEPER_INPUT");
+    const char *beeper_input = std::getenv("FRE3NDERSCREEN_BEEPER_INPUT");
     TouchBeep::init(beeper_input);
     indev_drv_1.feedback_cb = TouchBeep::feedback_cb;
 

@@ -69,7 +69,7 @@ void Config::init(std::string config_path, const std::string thumbdir) {
     data = json::parse(std::fstream(config_path));
   } else {
     data = {
-        {"log_path", "/usr/data/printer_data/logs/guppyscreen.log"},
+        {"log_path", "/usr/data/printer_data/logs/fre3nderscreen.log"},
         {"thumbnail_path", thumbdir},
         {"wpa_supplicant", "/var/run/wpa_supplicant"},
         {"display_sleep_sec", 600}
@@ -114,9 +114,9 @@ void Config::init(std::string config_path, const std::string thumbdir) {
       }
     }
 
-    auto &guppy_init = data["/guppy_init_script"_json_pointer];
+    auto &guppy_init = data["/fre3nderscreen_init_script"_json_pointer];
     if (guppy_init.is_null()) {
-      data["/guppy_init_script"_json_pointer] = "/etc/init.d/S99guppyscreen";
+      data["/fre3nderscreen_init_script"_json_pointer] = "/etc/init.d/S99fre3nderscreen";
     }
 
     auto &ll = data[json::json_pointer(df() + "log_level")];

@@ -1,0 +1,39 @@
+services:
+  simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      HOME: /work/home
+      DISPLAY: "${DISPLAY:-:0}"
+      HOST_UID: "${HOST_UID:-1000}"
+      HOST_GID: "${HOST_GID:-1000}"
+      FRE3NDERSCREEN_CONFIG_SOURCE: "${FRE3NDERSCREEN_CONFIG_SOURCE:-/src/dev/simulator/fre3nderscreen.json}"
+      SIMULATOR_FORCE_REBUILD: "${SIMULATOR_FORCE_REBUILD:-0}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ../..:/src:ro
+      - ../../build/docker-sim:/work
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    command: ["simulator"]
+
+  screenshot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      HOME: /work/home
+      HOST_UID: "${HOST_UID:-1000}"
+      HOST_GID: "${HOST_GID:-1000}"
+      FRE3NDERSCREEN_CONFIG_SOURCE: "${FRE3NDERSCREEN_CONFIG_SOURCE:-/src/dev/simulator/fre3nderscreen.json}"
+      SCREENSHOT_DELAY: "${SCREENSHOT_DELAY:-3}"
+      SCREENSHOT_NAME: "${SCREENSHOT_NAME:-fre3nderscreen}"
+      SIMULATOR_FORCE_REBUILD: "${SIMULATOR_FORCE_REBUILD:-0}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ../..:/src:ro
+      - ../../build/docker-sim:/work
+      - ../../build/ui-screenshots:/screenshots
+    command: ["screenshot"]

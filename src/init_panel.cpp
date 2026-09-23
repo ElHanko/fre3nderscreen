@@ -26,7 +26,7 @@ InitPanel::InitPanel(MainPanel &mp, BedMeshPanel &bmp, std::mutex& l)
   if (!conf->get_json("/default_printer").is_null()) {
     lv_label_set_text(label, LV_SYMBOL_WARNING " Waiting for printer to initialize...");
   } else {
-    lv_label_set_text(label, "Welcome to Guppy Screen. Use the Setting Panel to add your printers.");
+    lv_label_set_text(label, "Fre3nderScreen is not configured. Check the Fre3nder configuration.");
   }
   lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
@@ -62,7 +62,7 @@ void InitPanel::connected(KWebSocketClient &ws) {
 			[](json& j) { State::get_instance()->set_data("console", j, "/result/value"); });
 
 	h = {
-	  { "namespace", "guppyscreen" }
+	  { "namespace", "fre3nderscreen" }
 	};
 	ws.send_jsonrpc("server.database.get_item", h,
 			[](json& j) { State::get_instance()->set_data("guppysettings", j, "/result/value"); });	

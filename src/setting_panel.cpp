@@ -12,8 +12,6 @@ namespace sp = subprocess;
 LV_IMG_DECLARE(network_img);
 LV_IMG_DECLARE(refresh_img);
 LV_IMG_DECLARE(spoolman_img);
-LV_IMG_DECLARE(update_img);
-
 #ifdef ZBOLT
 LV_IMG_DECLARE(info_img);
 #else
@@ -39,8 +37,7 @@ SettingPanel::SettingPanel(KWebSocketClient &c, std::mutex &l, lv_obj_t *parent,
   , sysinfo_btn(cont, &sysinfo_img, "System", &SettingPanel::_handle_callback, this)
 #endif
   , spoolman_btn(cont, &spoolman_img, "Spoolman", &SettingPanel::_handle_callback, this)
-  , guppy_restart_btn(cont, &refresh_img, "Restart Guppy", &SettingPanel::_handle_callback, this)
-  , guppy_update_btn(cont, &update_img, "Update Guppy", &SettingPanel::_handle_callback, this)
+  , guppy_restart_btn(cont, &refresh_img, "Restart Fre3nderScreen", &SettingPanel::_handle_callback, this)
   , printer_select_btn(cont, &print, "Printers", &SettingPanel::_handle_callback, this)
 {
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
@@ -72,7 +69,6 @@ SettingPanel::SettingPanel(KWebSocketClient &c, std::mutex &l, lv_obj_t *parent,
       sysinfo_btn.get_container(),
       spoolman_btn.get_container(),
       guppy_restart_btn.get_container(),
-      guppy_update_btn.get_container(),
       printer_select_btn.get_container(),
     };
 
@@ -128,10 +124,6 @@ SettingPanel::SettingPanel(KWebSocketClient &c, std::mutex &l, lv_obj_t *parent,
         LV_GRID_ALIGN_CENTER, 1, 1,
         LV_GRID_ALIGN_START, 2, 1);
     lv_obj_set_grid_cell(
-        guppy_update_btn.get_container(),
-        LV_GRID_ALIGN_CENTER, 2, 1,
-        LV_GRID_ALIGN_START, 2, 1);
-    lv_obj_set_grid_cell(
         printer_select_btn.get_container(),
         LV_GRID_ALIGN_CENTER, 3, 1,
         LV_GRID_ALIGN_START, 2, 1);
@@ -172,24 +164,14 @@ void SettingPanel::handle_callback(lv_event_t *event) {
       spdlog::trace("setting spoolman pressed");
       spoolman_panel.foreground();
     } else if (btn == guppy_restart_btn.get_container()) {
-      spdlog::trace("restart guppy pressed");
+      spdlog::trace("restart fre3nderscreen pressed");
       Config *conf = Config::get_instance();
-      auto init_script = conf->get<std::string>("/guppy_init_script");
+      auto init_script = conf->get<std::string>("/fre3nderscreen_init_script");
       const fs::path script(init_script);
-      if (fs::exists(script) || init_script.rfind("service guppyscreen", 0) == 0) {
+      if (fs::exists(script) || init_script.rfind("service fre3nderscreen", 0) == 0) {
         sp::call({init_script, "restart"});
       } else {
-        	spdlog::warn("Failed to restart Guppy Screen. Did not find restart script.");
-      }
-    } else if (btn == guppy_update_btn.get_container()) {
-      spdlog::trace("update guppy pressed");
-      // TODO: throw this inside the global threadpool to make it async
-      auto update_script = fs::canonical("/proc/self/exe").parent_path() / "update.sh";
-      const fs::path script(update_script);
-      if (fs::exists(script)) {
-	sp::call(script);
-      } else {
-	spdlog::warn("Failed to update Guppy Screen. Did not find update script.");
+        spdlog::warn("Failed to restart Fre3nderScreen. Did not find restart script.");
       }
     } else if (btn == printer_select_btn.get_container()) {
       spdlog::trace("setting printers pressed");

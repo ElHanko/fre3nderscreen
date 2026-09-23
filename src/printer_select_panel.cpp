@@ -40,7 +40,7 @@ PrinterSelectContainer::PrinterSelectContainer(PrinterSelectPanel &ps,
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_CLICKED) {
       PrinterSelectContainer *p = (PrinterSelectContainer*)e->user_data;
-      lv_obj_t *msgbox = p->prompt(fmt::format("Guppy Screen will restart. Do you want to switch to {}?",
+      lv_obj_t *msgbox = p->prompt(fmt::format("Fre3nderScreen will restart. Do you want to switch to {}?",
 					       p->name));
       lv_obj_add_event_cb(msgbox, [](lv_event_t *e) {
 	lv_obj_t *obj = lv_obj_get_parent(lv_event_get_target(e));
@@ -52,7 +52,7 @@ PrinterSelectContainer::PrinterSelectContainer(PrinterSelectPanel &ps,
 	  conf->set<std::string>("/default_printer", ((PrinterSelectContainer*)e->user_data)->name);
 	  conf->save();
 		  
-	  auto init_script = conf->get<std::string>("/guppy_init_script");
+	  auto init_script = conf->get<std::string>("/fre3nderscreen_init_script");
 	  const fs::path script(init_script);
 	  if (fs::exists(script)) {
 	    sp::call({init_script, "restart"});
