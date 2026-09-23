@@ -1,5 +1,4 @@
 #include "config.h"
-#include "platform.h"
 
 #include <sys/stat.h>
 #include <fstream>
@@ -72,19 +71,17 @@ void Config::init(std::string config_path, const std::string thumbdir) {
         {"log_path", "/usr/data/printer_data/logs/fre3nderscreen.log"},
         {"thumbnail_path", thumbdir},
         {"wpa_supplicant", "/var/run/wpa_supplicant"},
-        {"display_sleep_sec", 600}
-#ifndef OS_ANDROID
-        , {"default_printer", "k1"},
-        {"printers", {{"k1", {
+        {"display_sleep_sec", 600},
+        {"default_printer", "fre3nder"},
+        {"printers", {{"fre3nder", {
                                  {"moonraker_api_key", false},
                                  {"moonraker_host", "127.0.0.1"},
-                                 {"moonraker_port", 7125},
+                                 {"moonraker_port", 17126},
                                  {"monitored_sensors", sensors_conf},
                                  {"fans", fans_conf},
                                  {"default_macros", default_macros_conf},
                              }}}
         }
-#endif
     };
   }
 

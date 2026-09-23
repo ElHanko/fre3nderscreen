@@ -1,6 +1,0 @@
-#!/bin/bash
-
-VERSION=`cat ./VERSION`
-VERSION_STR="$VERSION-beta"
-
-echo -n "FRE3NDERSCREEN_VERSION=$VERSION_STR"

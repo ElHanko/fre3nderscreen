@@ -15,7 +15,7 @@
  * pwm-beeper input device instead.
  */
 
-#if !defined(SIMULATOR) && !defined(OS_ANDROID)
+#ifndef SIMULATOR
 #include <fcntl.h>
 #include <linux/input.h>
 #include <unistd.h>
@@ -27,7 +27,7 @@ constexpr uint32_t CLICK_FREQUENCY_HZ = 260;
 constexpr uint32_t CLICK_DURATION_MS = 4;
 constexpr uint32_t CLICK_DEBOUNCE_MS = 120;
 
-#if !defined(SIMULATOR) && !defined(OS_ANDROID)
+#ifndef SIMULATOR
 
 int beeper_fd = -1;
 uint32_t last_click_tick = 0;
@@ -64,7 +64,7 @@ void stop_tone(lv_timer_t *timer) {
 namespace TouchBeep {
 
 void init(const char *input_path) {
-#if !defined(SIMULATOR) && !defined(OS_ANDROID)
+#ifndef SIMULATOR
     if (beeper_fd >= 0) {
         close(beeper_fd);
         beeper_fd = -1;
@@ -87,7 +87,7 @@ void init(const char *input_path) {
 }
 
 void feedback_cb(lv_indev_drv_t * /*drv*/, uint8_t event_code) {
-#if !defined(SIMULATOR) && !defined(OS_ANDROID)
+#ifndef SIMULATOR
     if (beeper_fd < 0 || event_code != LV_EVENT_CLICKED) {
         return;
     }
