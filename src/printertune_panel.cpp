@@ -1,6 +1,5 @@
 #include "printertune_panel.h"
 #include "state.h"
-#include "ui_layout.h"
 #include "spdlog/spdlog.h"
 
 #include <experimental/filesystem>
@@ -41,92 +40,37 @@ PrinterTunePanel::PrinterTunePanel(KWebSocketClient &c, std::mutex &l, lv_obj_t 
 
   tmc_tune_btn.disable();
 
-  if (UiLayout::compact_portrait()) {
-    lv_obj_add_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_scroll_dir(cont, LV_DIR_VER);
-    lv_obj_set_scrollbar_mode(cont, LV_SCROLLBAR_MODE_AUTO);
 
-    lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(
-        cont,
-        LV_FLEX_ALIGN_START,
-        LV_FLEX_ALIGN_CENTER,
-        LV_FLEX_ALIGN_CENTER);
+  lv_obj_add_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scroll_dir(cont, LV_DIR_VER);
+  lv_obj_set_scrollbar_mode(cont, LV_SCROLLBAR_MODE_AUTO);
 
-    lv_obj_set_style_pad_all(cont, 6, 0);
-    lv_obj_set_style_pad_row(cont, 6, 0);
+  lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(
+      cont,
+      LV_FLEX_ALIGN_START,
+      LV_FLEX_ALIGN_CENTER,
+      LV_FLEX_ALIGN_CENTER);
 
-    lv_obj_t *buttons[] = {
-      bedmesh_btn.get_container(),
-      finetune_btn.get_container(),
-      inputshaper_btn.get_container(),
-      belts_calibration_btn.get_container(),
-      limits_btn.get_container(),
-      tmc_tune_btn.get_container(),
-      tmc_status_btn.get_container(),
-      power_devices_btn.get_container(),
-    };
+  lv_obj_set_style_pad_all(cont, 6, 0);
+  lv_obj_set_style_pad_row(cont, 6, 0);
 
-    for (lv_obj_t *button : buttons) {
-      lv_obj_set_width(button, LV_PCT(100));
-      lv_obj_set_height(button, 76);
-    }
-  } else {
-    lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_t *buttons[] = {
+    bedmesh_btn.get_container(),
+    finetune_btn.get_container(),
+    inputshaper_btn.get_container(),
+    belts_calibration_btn.get_container(),
+    limits_btn.get_container(),
+    tmc_tune_btn.get_container(),
+    tmc_status_btn.get_container(),
+    power_devices_btn.get_container(),
+  };
 
-    static lv_coord_t grid_main_row_dsc[] = {
-      LV_GRID_FR(2),
-      LV_GRID_FR(5),
-      LV_GRID_FR(5),
-      LV_GRID_TEMPLATE_LAST
-    };
-    static lv_coord_t grid_main_col_dsc[] = {
-      LV_GRID_FR(1),
-      LV_GRID_FR(1),
-      LV_GRID_FR(1),
-      LV_GRID_FR(1),
-      LV_GRID_TEMPLATE_LAST
-    };
-
-    lv_obj_set_grid_dsc_array(
-        cont,
-        grid_main_col_dsc,
-        grid_main_row_dsc);
-
-    lv_obj_set_grid_cell(
-        bedmesh_btn.get_container(),
-        LV_GRID_ALIGN_CENTER, 0, 1,
-        LV_GRID_ALIGN_START, 1, 1);
-    lv_obj_set_grid_cell(
-        finetune_btn.get_container(),
-        LV_GRID_ALIGN_CENTER, 1, 1,
-        LV_GRID_ALIGN_START, 1, 1);
-    lv_obj_set_grid_cell(
-        inputshaper_btn.get_container(),
-        LV_GRID_ALIGN_CENTER, 2, 1,
-        LV_GRID_ALIGN_START, 1, 1);
-    lv_obj_set_grid_cell(
-        belts_calibration_btn.get_container(),
-        LV_GRID_ALIGN_CENTER, 3, 1,
-        LV_GRID_ALIGN_START, 1, 1);
-
-    lv_obj_set_grid_cell(
-        limits_btn.get_container(),
-        LV_GRID_ALIGN_CENTER, 0, 1,
-        LV_GRID_ALIGN_START, 2, 1);
-    lv_obj_set_grid_cell(
-        tmc_tune_btn.get_container(),
-        LV_GRID_ALIGN_CENTER, 1, 1,
-        LV_GRID_ALIGN_START, 2, 1);
-    lv_obj_set_grid_cell(
-        tmc_status_btn.get_container(),
-        LV_GRID_ALIGN_CENTER, 2, 1,
-        LV_GRID_ALIGN_START, 2, 1);
-    lv_obj_set_grid_cell(
-        power_devices_btn.get_container(),
-        LV_GRID_ALIGN_CENTER, 3, 1,
-        LV_GRID_ALIGN_START, 2, 1);
+  for (lv_obj_t *button : buttons) {
+    lv_obj_set_width(button, LV_PCT(100));
+    lv_obj_set_height(button, 76);
   }
+
 }
 
 PrinterTunePanel::~PrinterTunePanel() {

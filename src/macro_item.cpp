@@ -1,5 +1,4 @@
 #include "macro_item.h"
-#include "ui_layout.h"
 #include "spdlog/spdlog.h"
 
 MacroItem::MacroItem(KWebSocketClient &c,
@@ -24,35 +23,28 @@ MacroItem::MacroItem(KWebSocketClient &c,
   }
 
   lv_obj_set_size(cont, LV_PCT(100), LV_SIZE_CONTENT);
-  // lv_obj_set_style_bg_color(cont, bg_color, 0);  
+  // lv_obj_set_style_bg_color(cont, bg_color, 0);
   // lv_obj_set_style_bg_opa(cont, LV_OPA_COVER, 0);
 
   lv_obj_set_size(top_cont, LV_PCT(100), LV_SIZE_CONTENT);
-  // lv_obj_set_style_bg_color(top_cont, bg_color, 0);  
+  // lv_obj_set_style_bg_color(top_cont, bg_color, 0);
   // lv_obj_set_style_bg_opa(top_cont, LV_OPA_COVER, 0);
   lv_obj_set_style_pad_all(top_cont, 0, 0);
-  
-  if (UiLayout::compact_portrait()) {
-    lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(
-        cont,
-        LV_FLEX_ALIGN_START,
-        LV_FLEX_ALIGN_CENTER,
-        LV_FLEX_ALIGN_CENTER);
-  } else {
-    lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_ROW_WRAP);
-    lv_obj_set_flex_align(
-        cont,
-        LV_FLEX_ALIGN_SPACE_EVENLY,
-        LV_FLEX_ALIGN_CENTER,
-        LV_FLEX_ALIGN_CENTER);
-  }
 
-  lv_obj_set_style_border_side(cont, LV_BORDER_SIDE_TOP, LV_PART_MAIN);  
+
+  lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(
+      cont,
+      LV_FLEX_ALIGN_START,
+      LV_FLEX_ALIGN_CENTER,
+      LV_FLEX_ALIGN_CENTER);
+
+
+  lv_obj_set_style_border_side(cont, LV_BORDER_SIDE_TOP, LV_PART_MAIN);
 
   lv_obj_set_style_border_width(cont, 2, 0);
   lv_obj_clear_flag(hide_show_cont, LV_OBJ_FLAG_SCROLLABLE);
-  
+
   lv_obj_center(hide_show);
 
   if (hidden) {
@@ -81,74 +73,72 @@ MacroItem::MacroItem(KWebSocketClient &c,
   lv_obj_center(run_btn_label);
   lv_obj_add_event_cb(run_btn , &MacroItem::_handle_send_macro, LV_EVENT_CLICKED, this);
 
-  if (UiLayout::compact_portrait()) {
-    static lv_coord_t compact_col_dsc[] = {
-      42,
-      LV_GRID_FR(1),
-      54,
-      LV_GRID_TEMPLATE_LAST
-    };
-    static lv_coord_t compact_row_dsc[] = {
-      48,
-      LV_GRID_TEMPLATE_LAST
-    };
 
-    lv_obj_set_height(top_cont, 48);
-    lv_obj_set_grid_dsc_array(
-        top_cont,
-        compact_col_dsc,
-        compact_row_dsc);
+  static lv_coord_t compact_col_dsc[] = {
+    42,
+    LV_GRID_FR(1),
+    54,
+    LV_GRID_TEMPLATE_LAST
+  };
+  static lv_coord_t compact_row_dsc[] = {
+    48,
+    LV_GRID_TEMPLATE_LAST
+  };
 
-    lv_obj_set_grid_cell(
-        hide_show_cont,
-        LV_GRID_ALIGN_STRETCH,
-        0,
-        1,
-        LV_GRID_ALIGN_STRETCH,
-        0,
-        1);
+  lv_obj_set_height(top_cont, 48);
+  lv_obj_set_grid_dsc_array(
+      top_cont,
+      compact_col_dsc,
+      compact_row_dsc);
 
-    lv_obj_set_grid_cell(
-        macro_label,
-        LV_GRID_ALIGN_STRETCH,
-        1,
-        1,
-        LV_GRID_ALIGN_CENTER,
-        0,
-        1);
+  lv_obj_set_grid_cell(
+      hide_show_cont,
+      LV_GRID_ALIGN_STRETCH,
+      0,
+      1,
+      LV_GRID_ALIGN_STRETCH,
+      0,
+      1);
 
-    lv_obj_set_grid_cell(
-        run_btn,
-        LV_GRID_ALIGN_CENTER,
-        2,
-        1,
-        LV_GRID_ALIGN_CENTER,
-        0,
-        1);
+  lv_obj_set_grid_cell(
+      macro_label,
+      LV_GRID_ALIGN_STRETCH,
+      1,
+      1,
+      LV_GRID_ALIGN_CENTER,
+      0,
+      1);
 
-    lv_obj_set_style_pad_all(top_cont, 2, 0);
+  lv_obj_set_grid_cell(
+      run_btn,
+      LV_GRID_ALIGN_CENTER,
+      2,
+      1,
+      LV_GRID_ALIGN_CENTER,
+      0,
+      1);
 
-    lv_obj_set_size(hide_show_cont, LV_PCT(100), LV_PCT(100));
+  lv_obj_set_style_pad_all(top_cont, 2, 0);
 
-    lv_label_set_long_mode(macro_label, LV_LABEL_LONG_DOT);
-    lv_obj_set_width(macro_label, LV_PCT(100));
-    lv_obj_set_height(macro_label, 24);
+  lv_obj_set_size(hide_show_cont, LV_PCT(100), LV_PCT(100));
 
-    lv_obj_set_width(run_btn, 48);
-    lv_obj_set_height(run_btn, 40);
-  }
+  lv_label_set_long_mode(macro_label, LV_LABEL_LONG_DOT);
+  lv_obj_set_width(macro_label, LV_PCT(100));
+  lv_obj_set_height(macro_label, 24);
+
+  lv_obj_set_width(run_btn, 48);
+  lv_obj_set_height(run_btn, 40);
+
 
 
   if (!m_params.empty()) {
     lv_obj_t *params_cont = lv_obj_create(cont);
-    // lv_obj_set_style_bg_color(params_cont, bg_color, 0);  
+    // lv_obj_set_style_bg_color(params_cont, bg_color, 0);
     // lv_obj_set_style_bg_opa(params_cont, LV_OPA_COVER, 0);
-    
-    if (UiLayout::compact_portrait()) {
-      lv_obj_set_size(params_cont, LV_PCT(100), LV_SIZE_CONTENT);
-    } else {
-      lv_obj_set_size(params_cont, LV_PCT(70), LV_SIZE_CONTENT);
-    }
+
+
+    lv_obj_set_size(params_cont, LV_PCT(100), LV_SIZE_CONTENT);
+
 
     lv_obj_set_flex_flow(params_cont, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_flex_align(params_cont, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
@@ -167,13 +157,10 @@ MacroItem::MacroItem(KWebSocketClient &c,
       lv_obj_clear_flag(param_value, LV_OBJ_FLAG_SCROLLABLE);
       lv_obj_add_event_cb(param_value, &MacroItem::_handle_kb_input, LV_EVENT_ALL, this);
 
-      if (UiLayout::compact_portrait()) {
-        lv_obj_set_width(param_name, LV_PCT(40));
-        lv_obj_set_width(param_value, LV_PCT(55));
-      } else {
-        lv_obj_set_width(param_name, LV_PCT(30));
-        lv_obj_set_width(param_value, LV_PCT(45));
-      }
+
+      lv_obj_set_width(param_name, LV_PCT(40));
+      lv_obj_set_width(param_value, LV_PCT(55));
+
 
       params.push_back({param_name, param_value});
     }
@@ -194,11 +181,11 @@ void MacroItem::handle_kb_input(lv_event_t *e)
   lv_obj_t *obj = lv_event_get_target(e);
 
   if(code == LV_EVENT_FOCUSED) {
-    spdlog::trace("macro item focused");    
+    spdlog::trace("macro item focused");
     lv_keyboard_set_textarea(kb, obj);
     lv_obj_clear_flag(kb, LV_OBJ_FLAG_HIDDEN);
   }
-  
+
   if(code == LV_EVENT_DEFOCUSED) {
     spdlog::trace("macro item defocused");
     lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
@@ -212,7 +199,7 @@ void MacroItem::handle_kb_input(lv_event_t *e)
     spdlog::trace("macro item keyboard close");
     lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
   }
-  
+
 }
 
 void MacroItem::handle_send_macro(lv_event_t *e) {
@@ -229,7 +216,7 @@ void MacroItem::handle_send_macro(lv_event_t *e) {
       }
     }
 
-    spdlog::trace("sending macro: {}", fmt::format("{}", fmt::join(kv, " "))); 
+    spdlog::trace("sending macro: {}", fmt::format("{}", fmt::join(kv, " ")));
     ws.gcode_script(fmt::format("{}", fmt::join(kv, " ")));
   }
 }
@@ -248,11 +235,11 @@ void MacroItem::handle_hide_show(lv_event_t *e) {
 	}
       }
     };
-    
+
     ws.send_jsonrpc("server.database.post_item", h);
-    
+
     hidden = !hidden;
-    
+
     if (hidden) {
       if (!always_visible) {
 	lv_obj_add_flag(cont, LV_OBJ_FLAG_HIDDEN);

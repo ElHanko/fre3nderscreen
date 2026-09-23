@@ -13,10 +13,10 @@ Fre3nderScreen is intentionally specialized for the Fre3nder platform:
 
 - Fre3nder on the Ender-3 V3 KE
 - Ingenic X2000 Linux target
-- local Moonraker connection
+- one local Moonraker endpoint
 - Linux framebuffer display
 - Linux evdev touchscreen input
-- the Fre3nder portrait touchscreen layout
+- fixed 272x480 Fre3nder portrait touchscreen layout
 - Fre3nder-specific display standby and touch feedback
 - SDL host simulation as a development tool
 

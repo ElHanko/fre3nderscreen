@@ -48,17 +48,7 @@ ifdef CROSS_COMPILE
 CSRCS			+= $(wildcard $(LVGL_DIR)/lv_touch_calibration/*.c)
 endif
 
-ASSET_DIR		= material
-ifdef GUPPY_SMALL_SCREEN
 ASSET_DIR		= material_46
-DEFINES			+= -D GUPPY_SMALL_SCREEN
-endif
-
-
-ifdef GUPPY_ROTATE
-DEFINES			+= -D GUPPY_ROTATE
-endif
-
 
 CSRCS 			+= $(wildcard $(LVGL_DIR)/assets/$(ASSET_DIR)/*.c)
 
@@ -81,10 +71,6 @@ INC 				:= -I./ -I./lvgl/ -I./lv_touch_calibration -I./spdlog/include -Ilibhv/in
 LDLIBS	 			:= -lm
 
 DEFINES				+= -D _GNU_SOURCE -DSPDLOG_COMPILED_LIB
-
-ifdef EVDEV_CALIBRATE
-DEFINES +=  -D EVDEV_CALIBRATE
-endif
 
 # SIMULATION is enabled by default, need CROSS_COMPILE variable to do MIPS build
 ifndef CROSS_COMPILE

@@ -35,7 +35,7 @@ namespace KUtils {
 
   bool is_running_local() {
     Config *conf = Config::get_instance();
-    std::string df_host = conf->get<std::string>(conf->df() + "moonraker_host");
+    std::string df_host = conf->get<std::string>("/moonraker_host");
     return df_host == "localhost" || df_host == "127.0.0.1";
   }
 
@@ -90,7 +90,7 @@ namespace KUtils {
       }
 
       Config *conf = Config::get_instance();
-      std::string df_host = conf->get<std::string>(conf->df() + "moonraker_host");
+      std::string df_host = conf->get<std::string>("/moonraker_host");
       std::string fname = relative_path.substr(relative_path.find_last_of("/\\") + 1);
       std::string fullpath = fmt::format("{}/{}", conf->get<std::string>("/thumbnail_path"), fname);
     
@@ -102,7 +102,7 @@ namespace KUtils {
       } else {
 	std::string thumb_url = fmt::format("http://{}:{}/server/files/gcodes/{}",
 					    df_host,
-					    conf->get<uint32_t>(conf->df() + "moonraker_port"),
+					    conf->get<uint32_t>("/moonraker_port"),
 					    HUrl::escape(relative_path));
 
 
@@ -128,11 +128,11 @@ namespace KUtils {
     spdlog::trace("root {}, fname {}, base filename {}, dest_fp {}", root, fname,
 		  filename.string(), dest_fullpath.string());
     Config *conf = Config::get_instance();
-    std::string df_host = conf->get<std::string>(conf->df() + "moonraker_host");
+    std::string df_host = conf->get<std::string>("/moonraker_host");
 
     std::string file_url = fmt::format("http://{}:{}/server/files/{}/{}",
 					df_host,
-					conf->get<uint32_t>(conf->df() + "moonraker_port"),
+					conf->get<uint32_t>("/moonraker_port"),
 					root,
 					HUrl::escape(fname));
     // threadpool this

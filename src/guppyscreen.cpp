@@ -72,11 +72,8 @@ GuppyScreen *GuppyScreen::init(std::function<void(lv_color_t, lv_color_t)> hal_i
 
   // config
   Config *conf = Config::get_instance();
-  const std::string ll_path = conf->df() + "log_level";
   auto ll = spdlog::level::from_str(
-      conf->get_json("/printers").empty() 
-      ? "debug" 
-      : conf->get<std::string>(ll_path));
+      conf->get<std::string>("/log_level"));
 
   auto selected_theme = conf->get_json("/theme").empty()
           ? "blue.json"
@@ -157,16 +154,13 @@ GuppyScreen *GuppyScreen::init(std::function<void(lv_color_t, lv_color_t)> hal_i
   ws.register_notify_update(State::get_instance());
 
   GuppyScreen *gs = GuppyScreen::get();
-  auto printers = conf->get_json("/printers");
-  if (!printers.empty()) {
-    // start initializing all guppy components
-    std::string ws_url = fmt::format("ws://{}:{}/websocket",
-                                     conf->get<std::string>(conf->df() + "moonraker_host"),
-                                     conf->get<uint32_t>(conf->df() + "moonraker_port"));
+  // start initializing all guppy components
+  std::string ws_url = fmt::format("ws://{}:{}/websocket",
+                                   conf->get<std::string>("/moonraker_host"),
+                                   conf->get<uint32_t>("/moonraker_port"));
 
-    spdlog::info("connecting to printer at {}", ws_url);
-    gs->connect_ws(ws_url);
-  }
+  spdlog::info("connecting to printer at {}", ws_url);
+  gs->connect_ws(ws_url);
 
   screen_saver = lv_obj_create(lv_scr_act());
 

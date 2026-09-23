@@ -34,13 +34,10 @@ The application build accepts:
 
 - `CROSS_COMPILE` - target toolchain prefix
 - `FRE3NDERSCREEN_VERSION` - version string exposed in the UI
-- `GUPPY_SMALL_SCREEN` - legacy build switch, pending cleanup
-- `GUPPY_ROTATE` - legacy build switch, pending cleanup
-- `EVDEV_CALIBRATE` - legacy calibration build switch, pending cleanup
 
-The legacy `GUPPY_*` build switches are deliberately not renamed in this
-identity migration because their behavior will be simplified in a later
-Fre3nder-specific cleanup.
+The production UI geometry is fixed at 272x480 portrait. The X2000 framebuffer
+is rotated with `LV_DISP_ROT_90`, the small-screen Material asset set is the
+only production asset set, and touch calibration is enabled by default.
 
 ### Host simulator
 

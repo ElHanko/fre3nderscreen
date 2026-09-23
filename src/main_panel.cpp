@@ -1,6 +1,5 @@
 #include "main_panel.h"
 #include "state.h"
-#include "ui_layout.h"
 #include "lvgl/lvgl.h"
 #include "spdlog/spdlog.h"
 
@@ -29,8 +28,8 @@ MainPanel::MainPanel(KWebSocketClient &websocket,
   , ws(websocket)
   , homing_panel(ws, lock)
   , fan_panel(ws, lock)
-  , led_panel(ws, lock)    
-  , tabview(lv_tabview_create(lv_scr_act(), LV_DIR_LEFT, UiLayout::tab_bar_width()))
+  , led_panel(ws, lock)
+  , tabview(lv_tabview_create(lv_scr_act(), LV_DIR_LEFT, 48))
   , main_tab(lv_tabview_add_tab(tabview, HOME_SYMBOL))
   , macros_tab(lv_tabview_add_tab(tabview, MACROS_SYMBOL))
   , macros_panel(ws, lock, macros_tab)
@@ -61,7 +60,7 @@ MainPanel::MainPanel(KWebSocketClient &websocket,
     lv_style_set_border_width(&style, 0);
     lv_style_set_bg_color(&style, lv_palette_darken(LV_PALETTE_GREY, 4));
 
-    ws.register_notify_update(this);    
+    ws.register_notify_update(this);
 }
 
 MainPanel::~MainPanel() {
@@ -107,7 +106,7 @@ void MainPanel::init(json &j) {
   printertune_panel.init(j);
 }
 
-void MainPanel::consume(json &j) {  
+void MainPanel::consume(json &j) {
   std::lock_guard<std::mutex> lock(lv_lock);
   for (const auto &el : sensors) {
     auto target_value = j[json::json_pointer(fmt::format("/params/0/{}/target", el.first))];
@@ -122,7 +121,7 @@ void MainPanel::consume(json &j) {
       el.second->update_series(value);
       el.second->update_value(value);
     }
-  }  
+  }
 }
 
 static void scroll_begin_event(lv_event_t * e)
@@ -137,16 +136,16 @@ static void scroll_begin_event(lv_event_t * e)
 void MainPanel::create_panel() {
   lv_obj_clear_flag(lv_tabview_get_content(tabview), LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_add_event_cb(lv_tabview_get_content(tabview), scroll_begin_event, LV_EVENT_SCROLL_BEGIN, NULL);
-  
+
   lv_obj_t * tab_btns = lv_tabview_get_tab_btns(tabview);
   lv_obj_set_style_bg_color(tab_btns, lv_palette_main(LV_PALETTE_GREY), LV_STATE_CHECKED | LV_PART_ITEMS);
   lv_obj_set_style_outline_width(tab_btns, 0, LV_PART_ITEMS | LV_STATE_FOCUS_KEY | LV_STATE_FOCUS_KEY);
   lv_obj_set_style_border_side(tab_btns, 0, LV_PART_ITEMS | LV_STATE_CHECKED);
   lv_obj_set_style_text_font(tab_btns, &materialdesign_font_40, LV_STATE_DEFAULT);
 
-  if (UiLayout::compact_portrait()) {
-    lv_obj_set_style_pad_all(tab_btns, 0, 0);
-  }
+
+  lv_obj_set_style_pad_all(tab_btns, 0, 0);
+
 
   // lv_obj_set_style_text_font(lv_scr_act(), LV_FONT_DEFAULT, 0);
 
@@ -157,7 +156,7 @@ void MainPanel::create_panel() {
   lv_obj_set_style_pad_all(setting_tab, 0, 0);
 
   create_main(main_tab);
-  
+
 }
 
 void MainPanel::handle_homing_cb(lv_event_t *event) {
@@ -208,140 +207,82 @@ void MainPanel::create_main(lv_obj_t * parent)
     lv_obj_set_style_pad_all(temp_cont, 0, 0);
     lv_obj_set_flex_flow(temp_cont, LV_FLEX_FLOW_ROW_WRAP);
 
-    if (UiLayout::compact_portrait()) {
-      lv_obj_set_flex_flow(temp_cont, LV_FLEX_FLOW_COLUMN);
-      lv_obj_set_flex_align(
-          temp_cont,
-          LV_FLEX_ALIGN_CENTER,
-          LV_FLEX_ALIGN_CENTER,
-          LV_FLEX_ALIGN_CENTER);
-      lv_obj_set_style_pad_row(temp_cont, 4, 0);
 
-      /*
-       * Compact portrait layout, e.g. Fre3nder's logical 272x480 display.
-       *
-       * Temperatures
-       * Chart
-       * Homing    Extrude
-       * Fans      LED
-       *     Print
-       */
-      static lv_coord_t grid_main_row_dsc[] = {
-        LV_GRID_FR(1),
-        LV_GRID_FR(1),
-        LV_GRID_FR(1),
-        LV_GRID_FR(1),
-        LV_GRID_FR(1),
-        LV_GRID_TEMPLATE_LAST
-      };
-      static lv_coord_t grid_main_col_dsc[] = {
-        LV_GRID_FR(1),
-        LV_GRID_FR(1),
-        LV_GRID_TEMPLATE_LAST
-      };
+    lv_obj_set_flex_flow(temp_cont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(
+        temp_cont,
+        LV_FLEX_ALIGN_CENTER,
+        LV_FLEX_ALIGN_CENTER,
+        LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(temp_cont, 4, 0);
 
-      lv_obj_set_grid_dsc_array(
-          main_cont,
-          grid_main_col_dsc,
-          grid_main_row_dsc);
+    /*
+     * Compact portrait layout, e.g. Fre3nder's logical 272x480 display.
+     *
+     * Temperatures
+     * Chart
+     * Homing    Extrude
+     * Fans      LED
+     *     Print
+     */
+    static lv_coord_t grid_main_row_dsc[] = {
+      LV_GRID_FR(1),
+      LV_GRID_FR(1),
+      LV_GRID_FR(1),
+      LV_GRID_FR(1),
+      LV_GRID_FR(1),
+      LV_GRID_TEMPLATE_LAST
+    };
+    static lv_coord_t grid_main_col_dsc[] = {
+      LV_GRID_FR(1),
+      LV_GRID_FR(1),
+      LV_GRID_TEMPLATE_LAST
+    };
 
-      /*
-       * Let the grid own the compact geometry. Avoid fixed widths here:
-       * the same layout should remain usable on other narrow portrait
-       * displays instead of being tuned only for exactly 272 pixels.
-       */
-      lv_obj_set_grid_cell(
-          temp_cont,
-          LV_GRID_ALIGN_STRETCH, 0, 2,
-          LV_GRID_ALIGN_STRETCH, 0, 1);
+    lv_obj_set_grid_dsc_array(
+        main_cont,
+        grid_main_col_dsc,
+        grid_main_row_dsc);
 
-      lv_obj_set_grid_cell(
-          temp_chart,
-          LV_GRID_ALIGN_STRETCH, 0, 2,
-          LV_GRID_ALIGN_STRETCH, 1, 1);
+    /*
+     * Let the grid own Fre3nder's fixed 272x480 portrait geometry.
+     */
+    lv_obj_set_grid_cell(
+        temp_cont,
+        LV_GRID_ALIGN_STRETCH, 0, 2,
+        LV_GRID_ALIGN_STRETCH, 0, 1);
 
-      lv_obj_set_grid_cell(
-          homing_btn.get_container(),
-          LV_GRID_ALIGN_STRETCH, 0, 1,
-          LV_GRID_ALIGN_CENTER, 2, 1);
+    lv_obj_set_grid_cell(
+        temp_chart,
+        LV_GRID_ALIGN_STRETCH, 0, 2,
+        LV_GRID_ALIGN_STRETCH, 1, 1);
 
-      lv_obj_set_grid_cell(
-          extrude_btn.get_container(),
-          LV_GRID_ALIGN_STRETCH, 1, 1,
-          LV_GRID_ALIGN_CENTER, 2, 1);
+    lv_obj_set_grid_cell(
+        homing_btn.get_container(),
+        LV_GRID_ALIGN_STRETCH, 0, 1,
+        LV_GRID_ALIGN_CENTER, 2, 1);
 
-      lv_obj_set_grid_cell(
-          action_btn.get_container(),
-          LV_GRID_ALIGN_STRETCH, 0, 1,
-          LV_GRID_ALIGN_CENTER, 3, 1);
+    lv_obj_set_grid_cell(
+        extrude_btn.get_container(),
+        LV_GRID_ALIGN_STRETCH, 1, 1,
+        LV_GRID_ALIGN_CENTER, 2, 1);
 
-      lv_obj_set_grid_cell(
-          led_btn.get_container(),
-          LV_GRID_ALIGN_STRETCH, 1, 1,
-          LV_GRID_ALIGN_CENTER, 3, 1);
+    lv_obj_set_grid_cell(
+        action_btn.get_container(),
+        LV_GRID_ALIGN_STRETCH, 0, 1,
+        LV_GRID_ALIGN_CENTER, 3, 1);
 
-      lv_obj_set_grid_cell(
-          print_btn.get_container(),
-          LV_GRID_ALIGN_STRETCH, 0, 2,
-          LV_GRID_ALIGN_CENTER, 4, 1);
+    lv_obj_set_grid_cell(
+        led_btn.get_container(),
+        LV_GRID_ALIGN_STRETCH, 1, 1,
+        LV_GRID_ALIGN_CENTER, 3, 1);
 
-    } else {
-      static lv_coord_t grid_main_row_dsc[] = {
-        LV_GRID_FR(1),
-        LV_GRID_FR(1),
-        LV_GRID_FR(1),
-        LV_GRID_TEMPLATE_LAST
-      };
-      static lv_coord_t grid_main_col_dsc[] = {
-        LV_GRID_FR(1),
-        LV_GRID_FR(1),
-        LV_GRID_FR(1),
-        LV_GRID_FR(1),
-        LV_GRID_TEMPLATE_LAST
-      };
+    lv_obj_set_grid_cell(
+        print_btn.get_container(),
+        LV_GRID_ALIGN_STRETCH, 0, 2,
+        LV_GRID_ALIGN_CENTER, 4, 1);
 
-      lv_obj_set_grid_dsc_array(
-          main_cont,
-          grid_main_col_dsc,
-          grid_main_row_dsc);
 
-      lv_obj_set_grid_cell(
-          homing_btn.get_container(),
-          LV_GRID_ALIGN_CENTER, 2, 1,
-          LV_GRID_ALIGN_CENTER, 0, 1);
-
-      lv_obj_set_grid_cell(
-          extrude_btn.get_container(),
-          LV_GRID_ALIGN_CENTER, 3, 1,
-          LV_GRID_ALIGN_CENTER, 0, 1);
-
-      lv_obj_set_grid_cell(
-          action_btn.get_container(),
-          LV_GRID_ALIGN_CENTER, 2, 1,
-          LV_GRID_ALIGN_CENTER, 1, 1);
-
-      lv_obj_set_grid_cell(
-          led_btn.get_container(),
-          LV_GRID_ALIGN_CENTER, 3, 1,
-          LV_GRID_ALIGN_CENTER, 1, 1);
-
-      lv_obj_set_grid_cell(
-          print_btn.get_container(),
-          LV_GRID_ALIGN_CENTER, 2, 2,
-          LV_GRID_ALIGN_CENTER, 2, 1);
-
-      lv_obj_set_size(temp_cont, LV_PCT(50), LV_PCT(50));
-      lv_obj_set_grid_cell(
-          temp_cont,
-          LV_GRID_ALIGN_START, 0, 2,
-          LV_GRID_ALIGN_CENTER, 0, 2);
-
-      lv_obj_set_size(temp_chart, LV_PCT(45), LV_PCT(40));
-      lv_obj_set_grid_cell(
-          temp_chart,
-          LV_GRID_ALIGN_END, 0, 2,
-          LV_GRID_ALIGN_END, 2, 1);
-    }
 
     lv_obj_align(temp_chart, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_size(temp_chart, 0, LV_PART_INDICATOR);
@@ -352,27 +293,17 @@ void MainPanel::create_main(lv_obj_t * parent)
         0,
         300);
 
-    if (UiLayout::compact_portrait()) {
-      lv_chart_set_axis_tick(
-          temp_chart,
-          LV_CHART_AXIS_PRIMARY_Y,
-          0,
-          0,
-          4,
-          2,
-          false,
-          0);
-    } else {
-      lv_chart_set_axis_tick(
-          temp_chart,
-          LV_CHART_AXIS_PRIMARY_Y,
-          0,
-          0,
-          6,
-          5,
-          true,
-          50);
-    }
+
+    lv_chart_set_axis_tick(
+        temp_chart,
+        LV_CHART_AXIS_PRIMARY_Y,
+        0,
+        0,
+        4,
+        2,
+        false,
+        0);
+
 
     lv_chart_set_div_line_count(temp_chart, 3, 8);
     lv_chart_set_point_count(temp_chart, 5000);
@@ -395,7 +326,7 @@ void MainPanel::create_sensors(json &temp_sensors) {
       } else if (color == "purple") {
 	color_code = lv_palette_main(LV_PALETTE_PURPLE);
       } else if (color == "blue") {
-	color_code = lv_palette_main(LV_PALETTE_BLUE);	
+	color_code = lv_palette_main(LV_PALETTE_BLUE);
       }
     } else {
       color_code = lv_palette_main((lv_palette_t)sensor.value()["color"].template get<int>());
@@ -418,9 +349,9 @@ void MainPanel::create_sensors(json &temp_sensors) {
         display_name.c_str(), color_code, controllable, false,
         numpad, key, temp_chart, temp_series);
 
-    if (UiLayout::compact_portrait()) {
-      sensor_widget->use_compact_layout();
-    }
+
+    sensor_widget->use_compact_layout();
+
 
     sensors.insert({key, sensor_widget});
   }

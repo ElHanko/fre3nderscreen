@@ -1,16 +1,10 @@
 {
-  "default_printer": "simulator",
   "display_sleep_sec": 3600,
+  "log_level": "debug",
   "log_path": "/work/runtime/logs/fre3nderscreen.log",
-  "printers": {
-    "simulator": {
-      "display_sleep_sec": 3600,
-      "log_level": "debug",
-      "moonraker_api_key": false,
-      "moonraker_host": "127.0.0.1",
-      "moonraker_port": 7125
-    }
-  },
+  "moonraker_api_key": false,
+  "moonraker_host": "127.0.0.1",
+  "moonraker_port": 7125,
   "thumbnail_path": "/work/runtime/thumbnails",
   "wpa_supplicant": "/work/runtime/wpa_supplicant/wlan0"
 }

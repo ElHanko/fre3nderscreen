@@ -15,7 +15,6 @@ class Config {
 
  protected:
   json data;
-  std::string default_printer;
 
  public:
   Config();
@@ -34,7 +33,6 @@ class Config {
   json &get_json(const std::string &json_path);
 
   void save();
-  std::string& df();
   std::string get_thumbnail_path();
   std::string get_wifi_interface();
   std::string get_path();

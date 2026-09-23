@@ -1,6 +1,5 @@
 #include "console_panel.h"
 #include "state.h"
-#include "ui_layout.h"
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
@@ -68,29 +67,29 @@ ConsolePanel::ConsolePanel(KWebSocketClient &websocket_client, std::mutex &lock,
   lv_obj_add_flag(label, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_add_event_cb(label, &ConsolePanel::_handle_clear_input, LV_EVENT_CLICKED, this);
 
-  if (UiLayout::compact_portrait()) {
-    /*
-     * The landscape UI places console output and macro history next to
-     * each other.  On a narrow portrait display that leaves both panes
-     * unusably thin.  Stack them instead.
-     */
-    lv_obj_clear_flag(top_cont, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_flex_flow(top_cont, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(
-        top_cont,
-        LV_FLEX_ALIGN_START,
-        LV_FLEX_ALIGN_CENTER,
-        LV_FLEX_ALIGN_CENTER);
 
-    lv_obj_set_size(output, LV_PCT(100), LV_PCT(40));
-    lv_obj_set_size(macro_list, LV_PCT(100), LV_PCT(60));
+  /*
+   * The landscape UI places console output and macro history next to
+   * each other.  On a narrow portrait display that leaves both panes
+   * unusably thin.  Stack them instead.
+   */
+  lv_obj_clear_flag(top_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_flex_flow(top_cont, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(
+      top_cont,
+      LV_FLEX_ALIGN_START,
+      LV_FLEX_ALIGN_CENTER,
+      LV_FLEX_ALIGN_CENTER);
 
-    lv_obj_set_scroll_dir(macro_list, LV_DIR_VER);
-    lv_obj_set_scrollbar_mode(macro_list, LV_SCROLLBAR_MODE_AUTO);
+  lv_obj_set_size(output, LV_PCT(100), LV_PCT(40));
+  lv_obj_set_size(macro_list, LV_PCT(100), LV_PCT(60));
 
-    lv_obj_set_height(input_cont, 44);
-    lv_obj_set_width(send_btn, 52);
-  }
+  lv_obj_set_scroll_dir(macro_list, LV_DIR_VER);
+  lv_obj_set_scrollbar_mode(macro_list, LV_SCROLLBAR_MODE_AUTO);
+
+  lv_obj_set_height(input_cont, 44);
+  lv_obj_set_width(send_btn, 52);
+
 
   // ws.register_gcode_resp([this](json& d) { this->handle_macro_response(d); });
   ws.register_method_callback("notify_gcode_response",
@@ -117,7 +116,7 @@ void ConsolePanel::handle_kb_input(lv_event_t *e)
     lv_keyboard_set_textarea(kb, input);
     lv_obj_clear_flag(kb, LV_OBJ_FLAG_HIDDEN);
   }
-  
+
   if(code == LV_EVENT_DEFOCUSED) {
     lv_keyboard_set_textarea(kb, NULL);
     lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
@@ -139,7 +138,7 @@ void ConsolePanel::handle_kb_input(lv_event_t *e)
 	    lv_table_set_cell_value(macro_list, index++, 0,  m.c_str());
 	  }
 	}
-	
+
 	for (const auto &m : all_macros) {
 	  if (m.rfind(upper_cmd, 0) == 0 || m.rfind(cmd, 0) == 0) {
 	    lv_table_set_cell_value(macro_list, index++, 0,  m.c_str());
@@ -150,7 +149,7 @@ void ConsolePanel::handle_kb_input(lv_event_t *e)
       }
     }
   }
-  
+
   if (code == LV_EVENT_READY) {
     spdlog::debug("keyboard ready");
     const char *cmd = lv_textarea_get_text(input);
@@ -165,7 +164,7 @@ void ConsolePanel::handle_kb_input(lv_event_t *e)
 
     if (!history.empty()) {
       const auto &front = history.front();
-      
+
       if (front != std::string(cmd)) {
 	if (history.size() >= 20) {
 	  history.pop_back();
@@ -181,7 +180,7 @@ void ConsolePanel::handle_kb_input(lv_event_t *e)
 	ws.send_jsonrpc("server.database.post_item", h);
       }
     }
-		    
+
     lv_textarea_set_text(input, "");
 
     uint32_t index = 0;
@@ -192,7 +191,7 @@ void ConsolePanel::handle_kb_input(lv_event_t *e)
     for (const auto &m : all_macros) {
       lv_table_set_cell_value(macro_list, index++, 0,  m.c_str());
     }
-    
+
   }
 }
 
@@ -206,7 +205,7 @@ void ConsolePanel::handle_select_macro(lv_event_t *e) {
     const char * macro = lv_table_get_cell_value(macro_list, row, col);
     lv_textarea_set_text(input, macro);
   }
-  
+
 }
 
 void ConsolePanel::handle_macros(json &j) {
@@ -230,7 +229,7 @@ void ConsolePanel::handle_macros(json &j) {
   for (const auto &m : history) {
     lv_table_set_cell_value(macro_list, index++, 0,  m.c_str());
   }
-  
+
   for (const auto &m : all_macros) {
     lv_table_set_cell_value(macro_list, index++, 0,  m.c_str());
   }
