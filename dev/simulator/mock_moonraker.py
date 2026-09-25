@@ -19,6 +19,7 @@ class SimulatorState:
         self.bed_target = 0.0
         self.part_fan = 0.35
         self.controller_fan = 0.60
+        self.led = 0.75
         self.print_state = "standby"
 
     def objects(self):
@@ -27,6 +28,7 @@ class SimulatorState:
             "heater_bed",
             "fan",
             "controller_fan electronics",
+            "output_pin LED",
             "print_stats",
             "toolhead",
             "gcode_move",
@@ -50,6 +52,7 @@ class SimulatorState:
             },
             "fan": {"speed": self.part_fan},
             "controller_fan electronics": {"speed": self.controller_fan},
+            "output_pin LED": {"value": self.led},
             "print_stats": {
                 "state": self.print_state,
                 "filename": "",
@@ -117,6 +120,17 @@ class SimulatorState:
                     0.0,
                     min(1.0, float(speed_text)),
                 )
+            return
+
+        match = re.search(
+            r"SET_PIN\s+PIN=LED\s+VALUE=([-+]?[0-9]*\.?[0-9]+)",
+            script,
+        )
+        if match:
+            self.led = max(
+                0.0,
+                min(1.0, float(match.group(1))),
+            )
             return
 
     def step_temperatures(self):
@@ -267,6 +281,7 @@ async def status_updates(app):
                         "heater_bed": STATE.status()["heater_bed"],
                         "fan": STATE.status()["fan"],
                         "controller_fan electronics": STATE.status()["controller_fan electronics"],
+                        "output_pin LED": STATE.status()["output_pin LED"],
                         "print_stats": {"state": STATE.print_state},
                     },
                     time.monotonic(),
