@@ -2,14 +2,14 @@
 #define __MINI_PRINT_STATUS__
 
 #include "lvgl/lvgl.h"
+
 #include <string>
 
 class MiniPrintStatus {
  public:
   MiniPrintStatus(lv_obj_t *parent,
-		  lv_event_cb_t cb,
-		  void* user_data);
-
+                  lv_event_cb_t cb,
+                  void *user_data);
   ~MiniPrintStatus();
 
   void show();
@@ -18,17 +18,19 @@ class MiniPrintStatus {
 
   void update_eta(std::string &eta_str);
   void update_status(std::string &status_str);
-  void update_progress(int p);
-  void update_img(const std::string &img_path, size_t twidth);
+  void update_progress(int progress);
+  void update_img(const std::string &img_path, size_t width);
   void reset();
 
  private:
+  void refresh_text();
+
   lv_obj_t *cont;
-  lv_obj_t *progress_bar;  
+  lv_obj_t *progress_bar;
   lv_obj_t *thumb;
   lv_obj_t *status_label;
   std::string status;
   std::string eta;
 };
 
-#endif //__MINI_PRINT_STATUS__
+#endif // __MINI_PRINT_STATUS__

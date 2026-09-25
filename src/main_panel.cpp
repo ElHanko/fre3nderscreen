@@ -153,7 +153,7 @@ MainPanel::MainPanel(KWebSocketClient &websocket,
   , print_status_panel(websocket, lock, main_cont)
   , print_panel(ws, lock, files_tab, print_status_panel)
   , printertune_panel(ws, lock, print_status_panel.get_finetune_panel())
-  , numpad(Numpad(main_cont))
+  , numpad(Numpad(lv_scr_act()))
   , extruder_panel(ws, lock, numpad, sm)
   , prompt_panel(websocket, lock, main_cont)
   , spoolman_panel(sm)

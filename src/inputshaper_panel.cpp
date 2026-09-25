@@ -179,6 +179,9 @@ InputShaperPanel::InputShaperPanel(KWebSocketClient &client,
         button_cont, LV_SYMBOL_SAVE, "Save"))
   , emergency_btn(create_action_button(
         button_cont, LV_SYMBOL_WARNING, "Stop", true))
+  , emergency_prompt(nullptr)
+  , emergency_confirm_btn(nullptr)
+  , emergency_cancel_btn(nullptr)
   , ximage_fullsized(false)
   , yimage_fullsized(false)
 {
@@ -494,6 +497,13 @@ InputShaperPanel::InputShaperPanel(KWebSocketClient &client,
 }
 
 InputShaperPanel::~InputShaperPanel() {
+  if (emergency_prompt != nullptr) {
+    lv_obj_del(emergency_prompt);
+    emergency_prompt = nullptr;
+    emergency_confirm_btn = nullptr;
+    emergency_cancel_btn = nullptr;
+  }
+
   if (cont != NULL) {
     lv_obj_del(cont);
     cont = NULL;
@@ -538,6 +548,114 @@ void InputShaperPanel::foreground() {
   lv_obj_move_foreground(cont);
 }
 
+
+
+void InputShaperPanel::request_emergency_stop()
+{
+  const auto value =
+      Config::get_instance()->get_json("/prompt_emergency_stop");
+  const bool should_prompt =
+      !value.is_null() && value.template get<bool>();
+
+  if (!should_prompt) {
+    spdlog::debug("emergency stop pressed");
+    ws.send_jsonrpc("printer.emergency_stop");
+    return;
+  }
+
+  if (emergency_prompt != nullptr) {
+    lv_obj_move_foreground(emergency_prompt);
+    return;
+  }
+
+  emergency_prompt = lv_obj_create(lv_scr_act());
+  lv_obj_set_size(emergency_prompt, LV_PCT(100), LV_PCT(100));
+  lv_obj_clear_flag(emergency_prompt, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(emergency_prompt, 0, 0);
+  lv_obj_set_style_border_width(emergency_prompt, 0, 0);
+  lv_obj_set_style_radius(emergency_prompt, 0, 0);
+  lv_obj_set_style_bg_color(
+      emergency_prompt, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_bg_opa(emergency_prompt, LV_OPA_70, 0);
+
+  lv_obj_t *dialog = lv_obj_create(emergency_prompt);
+  lv_obj_set_size(dialog, LV_PCT(90), 170);
+  lv_obj_center(dialog);
+  lv_obj_clear_flag(dialog, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(dialog, 12, 0);
+  lv_obj_set_style_bg_color(dialog, lv_color_hex(COLOR_CARD), 0);
+  lv_obj_set_style_border_width(dialog, 1, 0);
+  lv_obj_set_style_border_color(dialog, lv_color_hex(COLOR_BORDER), 0);
+  lv_obj_set_style_radius(dialog, 10, 0);
+  lv_obj_set_style_shadow_width(dialog, 0, 0);
+
+  lv_obj_t *message = lv_label_create(dialog);
+  lv_label_set_text(message, "Stop the printer immediately?");
+  lv_label_set_long_mode(message, LV_LABEL_LONG_WRAP);
+  lv_obj_set_width(message, LV_PCT(100));
+  lv_obj_set_style_text_align(message, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_style_text_font(message, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(message, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_align(message, LV_ALIGN_TOP_MID, 0, 14);
+
+  emergency_confirm_btn = lv_btn_create(dialog);
+  style_button(emergency_confirm_btn, true);
+  lv_obj_set_size(emergency_confirm_btn, 100, 46);
+  lv_obj_align(
+      emergency_confirm_btn, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+  lv_obj_add_event_cb(
+      emergency_confirm_btn,
+      &InputShaperPanel::_handle_emergency_prompt,
+      LV_EVENT_CLICKED,
+      this);
+
+  lv_obj_t *confirm_label = lv_label_create(emergency_confirm_btn);
+  lv_label_set_text(confirm_label, "Confirm");
+  lv_obj_set_style_text_color(
+      confirm_label, lv_color_hex(COLOR_DANGER), 0);
+  lv_obj_center(confirm_label);
+
+  emergency_cancel_btn = lv_btn_create(dialog);
+  style_button(emergency_cancel_btn);
+  lv_obj_set_size(emergency_cancel_btn, 100, 46);
+  lv_obj_align(
+      emergency_cancel_btn, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
+  lv_obj_add_event_cb(
+      emergency_cancel_btn,
+      &InputShaperPanel::_handle_emergency_prompt,
+      LV_EVENT_CLICKED,
+      this);
+
+  lv_obj_t *cancel_label = lv_label_create(emergency_cancel_btn);
+  lv_label_set_text(cancel_label, "Cancel");
+  lv_obj_set_style_text_color(
+      cancel_label, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_center(cancel_label);
+
+  lv_obj_move_foreground(emergency_prompt);
+}
+
+void InputShaperPanel::handle_emergency_prompt(lv_event_t *event)
+{
+  if (lv_event_get_code(event) != LV_EVENT_CLICKED) {
+    return;
+  }
+
+  lv_obj_t *button = lv_event_get_current_target(event);
+  if (button == emergency_confirm_btn) {
+    spdlog::debug("emergency stop confirmed");
+    ws.send_jsonrpc("printer.emergency_stop");
+  }
+
+  lv_obj_t *overlay = emergency_prompt;
+  emergency_prompt = nullptr;
+  emergency_confirm_btn = nullptr;
+  emergency_cancel_btn = nullptr;
+
+  if (overlay != nullptr) {
+    lv_obj_del(overlay);
+  }
+}
 
 void InputShaperPanel::handle_callback(lv_event_t *event) {
   lv_obj_t *btn = lv_event_get_current_target(event);
@@ -598,53 +716,7 @@ void InputShaperPanel::handle_callback(lv_event_t *event) {
   } else if (btn == back_btn) {
     lv_obj_move_background(cont);
   } else if (btn == emergency_btn) {
-    auto value = Config::get_instance()->get_json("/prompt_emergency_stop");
-    const bool prompt =
-        !value.is_null() && value.template get<bool>();
-
-    if (!prompt) {
-      ws.send_jsonrpc("printer.emergency_stop");
-      return;
-    }
-
-    static const char *buttons[] = {"Confirm", "Cancel", ""};
-    lv_obj_t *msgbox = lv_msgbox_create(
-        nullptr,
-        nullptr,
-        "Do you want to emergency stop?",
-        buttons,
-        false);
-
-    lv_obj_t *message = ((lv_msgbox_t *)msgbox)->text;
-    lv_obj_set_width(message, LV_PCT(100));
-    lv_obj_set_style_text_align(message, LV_TEXT_ALIGN_CENTER, 0);
-
-    lv_obj_t *button_matrix = lv_msgbox_get_btns(msgbox);
-    lv_btnmatrix_set_btn_ctrl(
-        button_matrix, 0, LV_BTNMATRIX_CTRL_CHECKED);
-    lv_btnmatrix_set_btn_ctrl(
-        button_matrix, 1, LV_BTNMATRIX_CTRL_CHECKED);
-
-    lv_obj_add_event_cb(
-        msgbox,
-        [](lv_event_t *event) {
-          lv_obj_t *box =
-              lv_obj_get_parent(lv_event_get_target(event));
-          const uint32_t clicked =
-              lv_msgbox_get_active_btn(box);
-
-          if (clicked == 0) {
-            auto *panel = static_cast<InputShaperPanel *>(
-                event->user_data);
-            panel->ws.send_jsonrpc("printer.emergency_stop");
-          }
-
-          lv_msgbox_close(box);
-        },
-        LV_EVENT_VALUE_CHANGED,
-        this);
-
-    lv_obj_center(msgbox);
+    request_emergency_stop();
   }
 }
 

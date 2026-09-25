@@ -66,6 +66,8 @@ class HomingPanel : public NotifyConsumer {
   uint32_t distance_idx;
 
   lv_obj_t *emergency_prompt;
+  lv_obj_t *emergency_confirm_btn;
+  lv_obj_t *emergency_cancel_btn;
 };
 
 #endif // __HOMING_PANEL_H__

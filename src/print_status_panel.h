@@ -3,20 +3,20 @@
 
 #include "websocket_client.h"
 #include "notify_consumer.h"
-#include "button_container.h"
-#include "image_label.h"
 #include "finetune_panel.h"
 #include "mini_print_status.h"
 #include "lvgl/lvgl.h"
 
-#include <mutex>
 #include <ctime>
 #include <map>
+#include <mutex>
+#include <string>
 
 class PrintStatusPanel : public NotifyConsumer {
  public:
-  /* PrintStatusPanel(KWebSocketClient &ws, std::mutex &lock, json &j); */
-  PrintStatusPanel(KWebSocketClient &ws, std::mutex &lock, lv_obj_t *mini_parent);
+  PrintStatusPanel(KWebSocketClient &ws,
+                   std::mutex &lock,
+                   lv_obj_t *mini_parent);
   ~PrintStatusPanel();
 
   void init(json &fans);
@@ -27,11 +27,11 @@ class PrintStatusPanel : public NotifyConsumer {
 
   void handle_metadata(const std::string &gcode_file, json &j);
   void handle_callback(lv_event_t *event);
-  
+
   static void _handle_callback(lv_event_t *event) {
-    PrintStatusPanel *panel = (PrintStatusPanel*)event->user_data;
+    auto *panel = static_cast<PrintStatusPanel *>(event->user_data);
     panel->handle_callback(event);
-  };
+  }
 
   void consume(json &j);
   void update_time_progress(uint32_t time_passed);
@@ -43,40 +43,61 @@ class PrintStatusPanel : public NotifyConsumer {
   FineTunePanel &get_finetune_panel();
 
  private:
+  enum class ConfirmAction {
+    None,
+    CancelPrint,
+    EmergencyStop,
+  };
+
+  void set_button_enabled(lv_obj_t *button, bool enabled);
+  void request_confirmation(ConfirmAction action,
+                            const char *message);
+  void execute_confirmation();
+  void close_confirmation();
+
   KWebSocketClient &ws;
   FineTunePanel finetune_panel;
   MiniPrintStatus mini_print_status;
+
   lv_obj_t *status_cont;
-  lv_obj_t *buttons_cont;
-  ButtonContainer finetune_btn;
-  ButtonContainer pause_btn;
-  ButtonContainer resume_btn;
-  ButtonContainer cancel_btn;
-  ButtonContainer emergency_btn;
-  ButtonContainer back_btn;
+  lv_obj_t *header_cont;
+  lv_obj_t *back_btn;
+  lv_obj_t *title_label;
+
   lv_obj_t *thumbnail_cont;
   lv_obj_t *thumbnail;
   lv_obj_t *pbar_cont;
+  lv_obj_t *filename_label;
   lv_obj_t *progress_bar;
   lv_obj_t *progress_label;
+
   lv_obj_t *detail_cont;
+  lv_obj_t *extruder_temp;
+  lv_obj_t *bed_temp;
+  lv_obj_t *print_speed;
+  lv_obj_t *z_offset;
+  lv_obj_t *flow_rate;
+  lv_obj_t *layers;
+  lv_obj_t *fan0;
+  lv_obj_t *elapsed;
+  lv_obj_t *time_left;
 
-  ImageLabel extruder_temp;
-  ImageLabel bed_temp;
-  ImageLabel print_speed;
-  ImageLabel z_offset;
-  ImageLabel flow_rate;
-  ImageLabel layers;
-  ImageLabel fan0;
-  ImageLabel elapsed;
-  /* ImageLabel fan1; */
-  ImageLabel time_left;
-  /* ImageLabel fan2; */
+  lv_obj_t *buttons_cont;
+  lv_obj_t *finetune_btn;
+  lv_obj_t *pause_btn;
+  lv_obj_t *resume_btn;
+  lv_obj_t *cancel_btn;
+  lv_obj_t *emergency_btn;
 
-  /* json &metadata; */
+  lv_obj_t *confirm_overlay;
+  lv_obj_t *confirm_dialog;
+  lv_obj_t *confirm_message;
+  lv_obj_t *confirm_yes_btn;
+  lv_obj_t *confirm_no_btn;
+  ConfirmAction pending_confirmation;
+
   uint32_t estimated_time_s;
 
-  // flow rate
   std::time_t flow_ts;
   double last_filament_used;
   double filament_diameter;

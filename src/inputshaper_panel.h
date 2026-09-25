@@ -17,6 +17,7 @@ class InputShaperPanel {
   void handle_image_clicked(lv_event_t *event);
   void handle_macro_response(json &j);
   void handle_update_slider(lv_event_t *event);
+  void handle_emergency_prompt(lv_event_t *event);
 
   static void _handle_callback(lv_event_t *event) {
     auto *panel = static_cast<InputShaperPanel *>(event->user_data);
@@ -33,6 +34,11 @@ class InputShaperPanel {
     panel->handle_update_slider(event);
   }
 
+  static void _handle_emergency_prompt(lv_event_t *event) {
+    auto *panel = static_cast<InputShaperPanel *>(event->user_data);
+    panel->handle_emergency_prompt(event);
+  }
+
   uint32_t find_shaper_index(const std::vector<std::string> &s,
                              const std::string &shaper);
 
@@ -43,6 +49,8 @@ class InputShaperPanel {
                          lv_obj_t *dd);
 
  private:
+  void request_emergency_stop();
+
   KWebSocketClient &ws;
   std::mutex &lv_lock;
 
@@ -84,6 +92,9 @@ class InputShaperPanel {
   lv_obj_t *calibrate_btn;
   lv_obj_t *save_btn;
   lv_obj_t *emergency_btn;
+  lv_obj_t *emergency_prompt;
+  lv_obj_t *emergency_confirm_btn;
+  lv_obj_t *emergency_cancel_btn;
 
   bool ximage_fullsized;
   bool yimage_fullsized;
