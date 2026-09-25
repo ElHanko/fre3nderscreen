@@ -17,12 +17,16 @@ class SimulatorState:
         self.extruder_target = 0.0
         self.bed_temp = 52.0
         self.bed_target = 0.0
+        self.part_fan = 0.35
+        self.controller_fan = 0.60
         self.print_state = "standby"
 
     def objects(self):
         return [
             "extruder",
             "heater_bed",
+            "fan",
+            "controller_fan electronics",
             "print_stats",
             "toolhead",
             "gcode_move",
@@ -44,6 +48,8 @@ class SimulatorState:
                 "target": round(self.bed_target, 2),
                 "power": 0.0 if self.bed_target <= 0 else 0.25,
             },
+            "fan": {"speed": self.part_fan},
+            "controller_fan electronics": {"speed": self.controller_fan},
             "print_stats": {
                 "state": self.print_state,
                 "filename": "",
@@ -80,17 +86,38 @@ class SimulatorState:
 
     def apply_gcode(self, script):
         match = re.search(
-            r"SET_HEATER_TEMPERATURE\\s+HEATER=([^\\s]+)\\s+TARGET=([-+]?[0-9]*\\.?[0-9]+)",
+            r"SET_HEATER_TEMPERATURE\s+HEATER=([^\s]+)\s+TARGET=([-+]?[0-9]*\.?[0-9]+)",
             script,
         )
-        if not match:
+        if match:
+            heater, target_text = match.groups()
+            target = float(target_text)
+            if heater == "extruder":
+                self.extruder_target = target
+            elif heater == "heater_bed":
+                self.bed_target = target
             return
-        heater, target_text = match.groups()
-        target = float(target_text)
-        if heater == "extruder":
-            self.extruder_target = target
-        elif heater == "heater_bed":
-            self.bed_target = target
+
+        match = re.search(r"M106\s+S([-+]?[0-9]*\.?[0-9]+)", script)
+        if match:
+            self.part_fan = max(
+                0.0,
+                min(1.0, float(match.group(1)) / 255.0),
+            )
+            return
+
+        match = re.search(
+            r"SET_FAN_SPEED\s+FAN=([^\s]+)\s+SPEED=([-+]?[0-9]*\.?[0-9]+)",
+            script,
+        )
+        if match:
+            fan, speed_text = match.groups()
+            if fan == "electronics":
+                self.controller_fan = max(
+                    0.0,
+                    min(1.0, float(speed_text)),
+                )
+            return
 
     def step_temperatures(self):
         # Keep the default screen stable, but make temperature controls useful:
@@ -238,6 +265,8 @@ async def status_updates(app):
                     {
                         "extruder": STATE.status()["extruder"],
                         "heater_bed": STATE.status()["heater_bed"],
+                        "fan": STATE.status()["fan"],
+                        "controller_fan electronics": STATE.status()["controller_fan electronics"],
                         "print_stats": {"state": STATE.print_state},
                     },
                     time.monotonic(),

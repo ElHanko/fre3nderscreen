@@ -1,222 +1,436 @@
 #include "fan_panel.h"
+
 #include "state.h"
 #include "utils.h"
 #include "spdlog/spdlog.h"
 
-LV_IMG_DECLARE(cancel);
-LV_IMG_DECLARE(fan_on);
-LV_IMG_DECLARE(back);
+namespace {
+
+constexpr uint32_t COLOR_BG = 0x080B0D;
+constexpr uint32_t COLOR_CARD = 0x11171B;
+constexpr uint32_t COLOR_CARD_PRESSED = 0x18242A;
+constexpr uint32_t COLOR_BORDER = 0x25323A;
+constexpr uint32_t COLOR_ACCENT = 0x00E5FF;
+constexpr uint32_t COLOR_TEXT = 0xFFFFFF;
+constexpr uint32_t COLOR_MUTED = 0xB8C0C5;
+
+void style_button(lv_obj_t *button)
+{
+  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
+  lv_obj_set_style_border_width(button, 1, 0);
+  lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
+  lv_obj_set_style_radius(button, 8, 0);
+  lv_obj_set_style_shadow_width(button, 0, 0);
+  lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD_PRESSED), LV_STATE_PRESSED);
+  lv_obj_set_style_border_color(button, lv_color_hex(COLOR_ACCENT), LV_STATE_PRESSED);
+}
+
+lv_obj_t *create_text_button(lv_obj_t *parent,
+                             const char *text,
+                             lv_event_cb_t callback,
+                             void *user_data)
+{
+  lv_obj_t *button = lv_btn_create(parent);
+  style_button(button);
+  lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, user_data);
+
+  lv_obj_t *label = lv_label_create(button);
+  lv_label_set_text(label, text);
+  lv_obj_set_style_text_font(label, &lv_font_montserrat_12, 0);
+  lv_obj_set_style_text_color(label, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_center(label);
+
+  return button;
+}
+
+void style_transparent_container(lv_obj_t *cont)
+{
+  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(cont, 0, 0);
+  lv_obj_set_style_border_width(cont, 0, 0);
+  lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
+}
+
+} // namespace
 
 FanPanel::FanPanel(KWebSocketClient &websocket_client, std::mutex &lock)
   : NotifyConsumer(lock)
   , ws(websocket_client)
   , fanpanel_cont(lv_obj_create(lv_scr_act()))
+  , header_cont(lv_obj_create(fanpanel_cont))
+  , back_btn(lv_btn_create(header_cont))
+  , title_label(lv_label_create(header_cont))
   , fans_cont(lv_obj_create(fanpanel_cont))
-  , back_btn(fanpanel_cont, &back, "Back", &FanPanel::_handle_callback, this)
 {
-  lv_obj_set_style_pad_all(fanpanel_cont, 0, 0);
-  
-  lv_obj_clear_flag(fanpanel_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_move_background(fanpanel_cont);
   lv_obj_set_size(fanpanel_cont, LV_PCT(100), LV_PCT(100));
+  lv_obj_clear_flag(fanpanel_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(fanpanel_cont, 8, 0);
+  lv_obj_set_style_pad_row(fanpanel_cont, 8, 0);
+  lv_obj_set_style_border_width(fanpanel_cont, 0, 0);
+  lv_obj_set_style_bg_color(fanpanel_cont, lv_color_hex(COLOR_BG), 0);
 
-  lv_obj_center(fans_cont);
-  lv_obj_set_size(fans_cont, lv_pct(80), lv_pct(100));
+  static lv_coord_t rows[] = {
+    42,
+    LV_GRID_FR(1),
+    LV_GRID_TEMPLATE_LAST
+  };
+  static lv_coord_t cols[] = {
+    LV_GRID_FR(1),
+    LV_GRID_TEMPLATE_LAST
+  };
+  lv_obj_set_grid_dsc_array(fanpanel_cont, cols, rows);
+
+  lv_obj_set_grid_cell(
+      header_cont,
+      LV_GRID_ALIGN_STRETCH, 0, 1,
+      LV_GRID_ALIGN_STRETCH, 0, 1);
+  style_transparent_container(header_cont);
+
+  style_button(back_btn);
+  lv_obj_set_size(back_btn, 40, 34);
+  lv_obj_align(back_btn, LV_ALIGN_LEFT_MID, 0, 0);
+  lv_obj_add_event_cb(back_btn, &FanPanel::_handle_callback, LV_EVENT_CLICKED, this);
+
+  lv_obj_t *back_label = lv_label_create(back_btn);
+  lv_label_set_text(back_label, LV_SYMBOL_LEFT);
+  lv_obj_set_style_text_font(back_label, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(back_label, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_center(back_label);
+
+  lv_label_set_text(title_label, "Fans");
+  lv_obj_set_style_text_font(title_label, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(title_label, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_center(title_label);
+
+  lv_obj_set_grid_cell(
+      fans_cont,
+      LV_GRID_ALIGN_STRETCH, 0, 1,
+      LV_GRID_ALIGN_STRETCH, 1, 1);
+  lv_obj_set_style_pad_all(fans_cont, 0, 0);
+  lv_obj_set_style_pad_row(fans_cont, 8, 0);
+  lv_obj_set_style_border_width(fans_cont, 0, 0);
+  lv_obj_set_style_bg_opa(fans_cont, LV_OPA_TRANSP, 0);
   lv_obj_set_flex_flow(fans_cont, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_scroll_dir(fans_cont, LV_DIR_VER);
+  lv_obj_set_scrollbar_mode(fans_cont, LV_SCROLLBAR_MODE_AUTO);
 
-  lv_obj_align(back_btn.get_container(), LV_ALIGN_BOTTOM_RIGHT, 0, -20);
   ws.register_notify_update(this);
 }
 
-FanPanel::~FanPanel() {
-  if (fanpanel_cont != NULL) {
-    lv_obj_del(fanpanel_cont);
-    fanpanel_cont = NULL;
-  }
-
-  fans.clear();
-
+FanPanel::~FanPanel()
+{
   ws.unregister_notify_update(this);
+
+  if (fanpanel_cont != nullptr) {
+    lv_obj_del(fanpanel_cont);
+    fanpanel_cont = nullptr;
+  }
 }
 
-void FanPanel::consume(json &j) {
-  std::lock_guard<std::mutex> lock(lv_lock);
-  for (auto &f : fans) {
-    // hack for output_pin fans
-    auto fan_value = j[json::json_pointer(fmt::format("/params/0/{}/value", f.first))];
-    if (!fan_value.is_null()) {
-      int v = static_cast<int>(fan_value.template get<double>() * 100);
-      f.second->update_value(v);
-    }
+FanPanel::FanControl FanPanel::create_fan_control(
+    const std::string &display_name,
+    lv_event_cb_t callback)
+{
+  FanControl control{};
 
-    fan_value = j[json::json_pointer(fmt::format("/params/0/{}/speed", f.first))];
-    if (!fan_value.is_null()) {
-      int v = static_cast<int>(fan_value.template get<double>() * 100);
-      f.second->update_value(v);
+  control.card = lv_obj_create(fans_cont);
+  lv_obj_set_size(control.card, LV_PCT(100), 116);
+  lv_obj_clear_flag(control.card, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(control.card, 8, 0);
+  lv_obj_set_style_pad_row(control.card, 6, 0);
+  lv_obj_set_style_pad_column(control.card, 8, 0);
+  lv_obj_set_style_radius(control.card, 8, 0);
+  lv_obj_set_style_border_width(control.card, 1, 0);
+  lv_obj_set_style_border_color(control.card, lv_color_hex(COLOR_BORDER), 0);
+  lv_obj_set_style_bg_color(control.card, lv_color_hex(COLOR_CARD), 0);
+
+  static lv_coord_t rows[] = {
+    22,
+    28,
+    38,
+    LV_GRID_TEMPLATE_LAST
+  };
+  static lv_coord_t cols[] = {
+    LV_GRID_FR(1),
+    LV_GRID_FR(1),
+    LV_GRID_TEMPLATE_LAST
+  };
+  lv_obj_set_grid_dsc_array(control.card, cols, rows);
+
+  lv_obj_t *name_label = lv_label_create(control.card);
+  lv_label_set_text(name_label, display_name.c_str());
+  lv_obj_set_style_text_font(name_label, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(name_label, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_set_grid_cell(
+      name_label,
+      LV_GRID_ALIGN_START, 0, 1,
+      LV_GRID_ALIGN_CENTER, 0, 1);
+
+  control.value_label = lv_label_create(control.card);
+  lv_label_set_text(control.value_label, "0%");
+  lv_obj_set_style_text_font(control.value_label, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(control.value_label, lv_color_hex(COLOR_MUTED), 0);
+  lv_obj_set_grid_cell(
+      control.value_label,
+      LV_GRID_ALIGN_END, 1, 1,
+      LV_GRID_ALIGN_CENTER, 0, 1);
+
+  control.slider = lv_slider_create(control.card);
+  lv_slider_set_range(control.slider, 0, 100);
+  lv_obj_set_grid_cell(
+      control.slider,
+      LV_GRID_ALIGN_STRETCH, 0, 2,
+      LV_GRID_ALIGN_CENTER, 1, 1);
+  lv_obj_set_style_bg_color(control.slider, lv_color_hex(COLOR_BORDER), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(control.slider, lv_color_hex(COLOR_ACCENT), LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(control.slider, lv_color_hex(COLOR_TEXT), LV_PART_KNOB);
+  lv_obj_add_event_cb(control.slider, callback, LV_EVENT_VALUE_CHANGED, this);
+  lv_obj_add_event_cb(control.slider, callback, LV_EVENT_RELEASED, this);
+
+  control.off_btn = create_text_button(control.card, "Off", callback, this);
+  control.max_btn = create_text_button(control.card, "Max", callback, this);
+
+  lv_obj_set_grid_cell(
+      control.off_btn,
+      LV_GRID_ALIGN_STRETCH, 0, 1,
+      LV_GRID_ALIGN_STRETCH, 2, 1);
+  lv_obj_set_grid_cell(
+      control.max_btn,
+      LV_GRID_ALIGN_STRETCH, 1, 1,
+      LV_GRID_ALIGN_STRETCH, 2, 1);
+
+  return control;
+}
+
+void FanPanel::update_value(FanControl &control, int value)
+{
+  const int clamped = value < 0 ? 0 : (value > 100 ? 100 : value);
+  lv_slider_set_value(control.slider, clamped, LV_ANIM_OFF);
+  lv_label_set_text(control.value_label, fmt::format("{}%", clamped).c_str());
+}
+
+void FanPanel::sync_value_event(lv_event_t *event)
+{
+  if (lv_event_get_code(event) != LV_EVENT_VALUE_CHANGED) {
+    return;
+  }
+
+  lv_obj_t *object = lv_event_get_target(event);
+  for (auto &entry : fans) {
+    if (object == entry.second.slider) {
+      update_value(entry.second, lv_slider_get_value(object));
+      return;
     }
   }
 }
 
-void FanPanel::create_fans(json &f) {
+void FanPanel::consume(json &j)
+{
   std::lock_guard<std::mutex> lock(lv_lock);
+
+  for (auto &entry : fans) {
+    auto value = j[json::json_pointer(
+        fmt::format("/params/0/{}/value", entry.first))];
+
+    if (!value.is_null()) {
+      update_value(
+          entry.second,
+          static_cast<int>(value.template get<double>() * 100));
+    }
+
+    value = j[json::json_pointer(
+        fmt::format("/params/0/{}/speed", entry.first))];
+
+    if (!value.is_null()) {
+      update_value(
+          entry.second,
+          static_cast<int>(value.template get<double>() * 100));
+    }
+  }
+}
+
+void FanPanel::create_fans(json &display_fans)
+{
+  std::lock_guard<std::mutex> lock(lv_lock);
+
+  lv_obj_clean(fans_cont);
   fans.clear();
 
-  for (auto &fan : f.items()) {
-    std::string key = fan.key();
-    spdlog::trace("create fan {}, {}", f.dump(), fan.value().dump());
-    std::string display_name = fan.value()["display_name"].template get<std::string>();
+  for (auto &fan : display_fans.items()) {
+    const std::string key = fan.key();
+    const std::string display_name =
+        fan.value()["display_name"].template get<std::string>();
 
-    lv_event_cb_t fan_cb = &FanPanel::_handle_fan_update;
+    lv_event_cb_t callback = &FanPanel::_handle_fan_update;
+
     if (key == "fan") {
-      fan_cb = &FanPanel::_handle_fan_update_part_fan;
+      callback = &FanPanel::_handle_fan_update_part_fan;
     } else if (key.rfind("output_pin ", 0) != 0) {
-      // generic_fan, controller_fan, etc.
-      fan_cb = &FanPanel::_handle_fan_update_generic;
+      callback = &FanPanel::_handle_fan_update_generic;
     }
-    auto fptr = std::make_shared<SliderContainer>(fans_cont, display_name.c_str(), &cancel, "Off",
-						  &fan_on, "Max", fan_cb, this);
-    fans.insert({key, fptr});
-    // lv_obj_set_grid_cell(fptr->get_container(), LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, rowidx++, 1);
-  }
 
-  if (fans.size() > 3) {
-    lv_obj_add_flag(fans_cont, LV_OBJ_FLAG_SCROLLABLE);
-  } else {
-    lv_obj_clear_flag(fans_cont, LV_OBJ_FLAG_SCROLLABLE);    
+    fans.emplace(key, create_fan_control(display_name, callback));
   }
-
-  lv_obj_move_foreground(back_btn.get_container());
 }
 
-void FanPanel::foreground() {
-  for (auto &f : fans) {
-    // hack for output_pin fans
-    auto fan_value = State::get_instance()
-      ->get_data(json::json_pointer(fmt::format("/printer_state/{}/value", f.first)));
-    if (!fan_value.is_null()) {
-      int v = static_cast<int>(fan_value.template get<double>() * 100);
-      f.second->update_value(v);
+lv_obj_t *FanPanel::get_container()
+{
+  return fanpanel_cont;
+}
+
+void FanPanel::foreground()
+{
+  for (auto &entry : fans) {
+    auto value = State::get_instance()->get_data(
+        json::json_pointer(
+            fmt::format("/printer_state/{}/value", entry.first)));
+
+    if (!value.is_null()) {
+      update_value(
+          entry.second,
+          static_cast<int>(value.template get<double>() * 100));
     }
 
-    fan_value = State::get_instance()
-      ->get_data(json::json_pointer(fmt::format("/printer_state/{}/speed", f.first)));
-    if (!fan_value.is_null()) {
-      int v = static_cast<int>(fan_value.template get<double>() * 100);
-      f.second->update_value(v);
+    value = State::get_instance()->get_data(
+        json::json_pointer(
+            fmt::format("/printer_state/{}/speed", entry.first)));
+
+    if (!value.is_null()) {
+      update_value(
+          entry.second,
+          static_cast<int>(value.template get<double>() * 100));
     }
   }
-  
-  lv_obj_move_foreground(back_btn.get_container());
+
   lv_obj_move_foreground(fanpanel_cont);
 }
 
-void FanPanel::handle_callback(lv_event_t *event) {
-  lv_obj_t *btn = lv_event_get_current_target(event);
-  if (btn == back_btn.get_container()) {
+void FanPanel::handle_callback(lv_event_t *event)
+{
+  if (lv_event_get_code(event) != LV_EVENT_CLICKED) {
+    return;
+  }
+
+  if (lv_event_get_current_target(event) == back_btn) {
     lv_obj_move_background(fanpanel_cont);
   }
-  else {
-    spdlog::debug("Unknown action button pressed");
-  }
 }
 
-void FanPanel::handle_fan_update(lv_event_t *event) {
-  lv_obj_t *obj = lv_event_get_target(event);
+void FanPanel::handle_fan_update(lv_event_t *event)
+{
+  sync_value_event(event);
 
-  if (lv_event_get_code(event) == LV_EVENT_RELEASED) {
-    double pct = 255 * (double)lv_slider_get_value(obj) / 100.0;
-
-    spdlog::trace("updating fan speed to {}", pct);
-    for (auto &f : fans) {
-      if (obj == f.second->get_slider()) {
-	std::string fan_name = KUtils::get_obj_name(f.first);
-      	spdlog::trace("update fan {}", fan_name);
-	ws.gcode_script(fmt::format(fmt::format("SET_PIN PIN={} VALUE={}", fan_name, pct)));
-	break;
-      }
-    }
-  } else if (lv_event_get_code(event) == LV_EVENT_CLICKED) {
-    obj = lv_event_get_current_target(event);
-    for (auto &f : fans) {
-      if (obj == f.second->get_off()) {
-	std::string fan_name = KUtils::get_obj_name(f.first);
-      	spdlog::trace("turning off fan {}", fan_name);
-	ws.gcode_script(fmt::format("SET_PIN PIN={} VALUE=0", fan_name));
-	f.second->update_value(0);
-	break;
-      } else if (obj == f.second->get_max()) {
-	std::string fan_name = KUtils::get_obj_name(f.first);
-	spdlog::trace("turning fan to max {}", fan_name);
-	ws.gcode_script(fmt::format("SET_PIN PIN={} VALUE=255", fan_name));
-	f.second->update_value(100);
-	break;
-      }
-    }
+  const lv_event_code_t code = lv_event_get_code(event);
+  if (code != LV_EVENT_RELEASED && code != LV_EVENT_CLICKED) {
+    return;
   }
-}
 
-void FanPanel::handle_fan_update_part_fan(lv_event_t *event) {
-  lv_obj_t *obj = lv_event_get_target(event);
+  lv_obj_t *object = lv_event_get_target(event);
 
-  if (lv_event_get_code(event) == LV_EVENT_RELEASED) {
-    double pct = 255 * (double)lv_slider_get_value(obj) / 100.0;
+  for (auto &entry : fans) {
+    FanControl &control = entry.second;
+    const std::string fan_name = KUtils::get_obj_name(entry.first);
 
-    spdlog::trace("updating part fan speed to {}", pct);
-    for (auto &f : fans) {
-      if (obj == f.second->get_slider()) {
-	ws.gcode_script(fmt::format(fmt::format("M106 S{}", pct)));
-	break;
-      }
+    if (code == LV_EVENT_RELEASED && object == control.slider) {
+      const double value = 255.0 * lv_slider_get_value(object) / 100.0;
+      ws.gcode_script(fmt::format("SET_PIN PIN={} VALUE={}", fan_name, value));
+      return;
     }
 
-  } else if (lv_event_get_code(event) == LV_EVENT_CLICKED) {
-    obj = lv_event_get_current_target(event);
-    
-    for (auto &f : fans) {
-      if (obj == f.second->get_off()) {
-	ws.gcode_script("M106 S0");
-	f.second->update_value(0);
-	break;
-      } else if (obj == f.second->get_max()) {
-	ws.gcode_script("M106 S255");
-	f.second->update_value(100);
-	break;
-      }
+    object = lv_event_get_current_target(event);
+
+    if (code == LV_EVENT_CLICKED && object == control.off_btn) {
+      ws.gcode_script(fmt::format("SET_PIN PIN={} VALUE=0", fan_name));
+      update_value(control, 0);
+      return;
+    }
+
+    if (code == LV_EVENT_CLICKED && object == control.max_btn) {
+      ws.gcode_script(fmt::format("SET_PIN PIN={} VALUE=255", fan_name));
+      update_value(control, 100);
+      return;
     }
   }
 }
 
-void FanPanel::handle_fan_update_generic(lv_event_t *event) {
-  lv_obj_t *obj = lv_event_get_target(event);
+void FanPanel::handle_fan_update_part_fan(lv_event_t *event)
+{
+  sync_value_event(event);
 
-  if (lv_event_get_code(event) == LV_EVENT_RELEASED) {
-    double pct = (double)lv_slider_get_value(obj) / 100.0;
+  const lv_event_code_t code = lv_event_get_code(event);
+  if (code != LV_EVENT_RELEASED && code != LV_EVENT_CLICKED) {
+    return;
+  }
 
-    spdlog::trace("updating fan speed to {}", pct);
-    for (auto &f : fans) {
-      if (obj == f.second->get_slider()) {
-	std::string fan_name = KUtils::get_obj_name(f.first);
-      	spdlog::trace("update fan {}", fan_name);
-	ws.gcode_script(fmt::format(fmt::format("SET_FAN_SPEED FAN={} SPEED={}", fan_name, pct)));
-	break;
-      }
+  lv_obj_t *object = lv_event_get_target(event);
+
+  for (auto &entry : fans) {
+    FanControl &control = entry.second;
+
+    if (code == LV_EVENT_RELEASED && object == control.slider) {
+      const double value = 255.0 * lv_slider_get_value(object) / 100.0;
+      ws.gcode_script(fmt::format("M106 S{}", value));
+      return;
     }
-  } else if (lv_event_get_code(event) == LV_EVENT_CLICKED) {
-    obj = lv_event_get_current_target(event);
 
-    for (auto &f : fans) {
-      if (obj == f.second->get_off()) {
-	std::string fan_name = KUtils::get_obj_name(f.first);
-      	spdlog::trace("turning off fan {}", fan_name);
-	ws.gcode_script(fmt::format("SET_FAN_SPEED FAN={} SPEED=0", fan_name));
-	f.second->update_value(0);
-	break;
-      } else if (obj == f.second->get_max()) {
-	std::string fan_name = KUtils::get_obj_name(f.first);
-	spdlog::trace("turning fan to max {}", fan_name);
-	ws.gcode_script(fmt::format("SET_FAN_SPEED FAN={} SPEED=1", fan_name));
-	f.second->update_value(100);
-	break;
-      }
+    object = lv_event_get_current_target(event);
+
+    if (code == LV_EVENT_CLICKED && object == control.off_btn) {
+      ws.gcode_script("M106 S0");
+      update_value(control, 0);
+      return;
+    }
+
+    if (code == LV_EVENT_CLICKED && object == control.max_btn) {
+      ws.gcode_script("M106 S255");
+      update_value(control, 100);
+      return;
+    }
+  }
+}
+
+void FanPanel::handle_fan_update_generic(lv_event_t *event)
+{
+  sync_value_event(event);
+
+  const lv_event_code_t code = lv_event_get_code(event);
+  if (code != LV_EVENT_RELEASED && code != LV_EVENT_CLICKED) {
+    return;
+  }
+
+  lv_obj_t *object = lv_event_get_target(event);
+
+  for (auto &entry : fans) {
+    FanControl &control = entry.second;
+    const std::string fan_name = KUtils::get_obj_name(entry.first);
+
+    if (code == LV_EVENT_RELEASED && object == control.slider) {
+      const double value = static_cast<double>(lv_slider_get_value(object)) / 100.0;
+      ws.gcode_script(fmt::format(
+          "SET_FAN_SPEED FAN={} SPEED={}",
+          fan_name,
+          value));
+      return;
+    }
+
+    object = lv_event_get_current_target(event);
+
+    if (code == LV_EVENT_CLICKED && object == control.off_btn) {
+      ws.gcode_script(fmt::format(
+          "SET_FAN_SPEED FAN={} SPEED=0",
+          fan_name));
+      update_value(control, 0);
+      return;
+    }
+
+    if (code == LV_EVENT_CLICKED && object == control.max_btn) {
+      ws.gcode_script(fmt::format(
+          "SET_FAN_SPEED FAN={} SPEED=1",
+          fan_name));
+      update_value(control, 100);
+      return;
     }
   }
 }
