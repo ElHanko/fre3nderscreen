@@ -9,28 +9,37 @@
 #include "tmc_tune_panel.h"
 #include "tmc_status_panel.h"
 #include "power_panel.h"
-#include "button_container.h"
 #include "lvgl/lvgl.h"
 
 #include <mutex>
+
 class PrinterTunePanel {
  public:
-  PrinterTunePanel(KWebSocketClient &c, std::mutex &l, lv_obj_t *parent, FineTunePanel &);
+  PrinterTunePanel(KWebSocketClient &client,
+                   std::mutex &lock,
+                   FineTunePanel &finetune);
   ~PrinterTunePanel();
 
   lv_obj_t *get_container();
   BedMeshPanel &get_bedmesh_panel();
   PowerPanel &get_power_panel();
+
+  void foreground();
   void init(json &j);
   void handle_callback(lv_event_t *event);
 
   static void _handle_callback(lv_event_t *event) {
-    PrinterTunePanel *panel = (PrinterTunePanel*)event->user_data;
+    auto *panel = static_cast<PrinterTunePanel *>(event->user_data);
     panel->handle_callback(event);
-  };
+  }
 
  private:
   lv_obj_t *cont;
+  lv_obj_t *header_cont;
+  lv_obj_t *back_btn;
+  lv_obj_t *title_label;
+  lv_obj_t *cards_cont;
+
   BedMeshPanel bedmesh_panel;
   FineTunePanel &finetune_panel;
   LimitsPanel limits_panel;
@@ -39,15 +48,15 @@ class PrinterTunePanel {
   TmcTunePanel tmc_tune_panel;
   TmcStatusPanel tmc_status_panel;
   PowerPanel power_panel;
-  ButtonContainer bedmesh_btn;  
-  ButtonContainer finetune_btn;
-  ButtonContainer inputshaper_btn;
-  ButtonContainer belts_calibration_btn;
-  ButtonContainer limits_btn;
-  ButtonContainer tmc_tune_btn;
-  ButtonContainer tmc_status_btn;
-  ButtonContainer power_devices_btn;
-  
+
+  lv_obj_t *bedmesh_btn;
+  lv_obj_t *finetune_btn;
+  lv_obj_t *inputshaper_btn;
+  lv_obj_t *belts_calibration_btn;
+  lv_obj_t *limits_btn;
+  lv_obj_t *tmc_tune_btn;
+  lv_obj_t *tmc_status_btn;
+  lv_obj_t *power_devices_btn;
 };
 
 #endif // __PRINTERTUNE_PANEL_H__

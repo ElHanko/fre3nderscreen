@@ -2,7 +2,6 @@
 #define __TMC_TUNE_PANEL__
 
 #include "websocket_client.h"
-#include "button_container.h"
 #include "lvgl/lvgl.h"
 #include "hv/iniparser.h"
 #include "hv/json.hpp"
@@ -20,13 +19,13 @@ using json = nlohmann::json;
 class AutoTmcContainer {
  public:
   AutoTmcContainer(const std::list<std::string> &motors,
-		   const std::string &stepper_name,
-		   int motor_idx,
-		   int goal_idx,
-		   bool has_sg,
-		   int16_t sg4_thrs,
-		   std::pair<int16_t, int16_t> sg_min_max,
-		   lv_obj_t *parent);
+                   const std::string &stepper_name,
+                   int motor_idx,
+                   int goal_idx,
+                   bool has_sg,
+                   int16_t sg4_thrs,
+                   std::pair<int16_t, int16_t> sg_min_max,
+                   lv_obj_t *parent);
 
   ~AutoTmcContainer();
   std::string get_config_macro();
@@ -47,27 +46,27 @@ class AutoTmcContainer {
 
 class TmcTunePanel {
  public:
-  TmcTunePanel(KWebSocketClient &c);
+  TmcTunePanel(KWebSocketClient &client);
   ~TmcTunePanel();
 
   void init(json &j, fs::path &kp);
   void foreground();
   void background();
-
   void save_config();
-  
+
  private:
   KWebSocketClient &ws;
   lv_obj_t *cont;
+  lv_obj_t *header_cont;
+  lv_obj_t *back_btn;
+  lv_obj_t *title_label;
   lv_obj_t *controls_cont;
   lv_obj_t *btns_cont;
-  ButtonContainer save_btn;
-  ButtonContainer back_btn;
+  lv_obj_t *save_btn;
   IniParser motor_parser;
 
   std::map<std::string, int> motor_index;
   std::vector<std::shared_ptr<AutoTmcContainer>> steppers;
-
 };
 
 #endif // __TMC_TUNE_PANEL__

@@ -152,7 +152,7 @@ MainPanel::MainPanel(KWebSocketClient &websocket,
   , main_cont(lv_obj_create(main_tab))
   , print_status_panel(websocket, lock, main_cont)
   , print_panel(ws, lock, files_tab, print_status_panel)
-  , printertune_panel(ws, lock, printertune_tab, print_status_panel.get_finetune_panel())
+  , printertune_panel(ws, lock, print_status_panel.get_finetune_panel())
   , numpad(Numpad(main_cont))
   , extruder_panel(ws, lock, numpad, sm)
   , prompt_panel(websocket, lock, main_cont)
@@ -553,7 +553,7 @@ void MainPanel::handle_more_cb(lv_event_t *event)
   } else if (target == more_console_btn) {
     console_panel.foreground();
   } else if (target == more_tune_btn) {
-    lv_tabview_set_act(tabview, TAB_TUNE, LV_ANIM_OFF);
+    printertune_panel.foreground();
   }
 }
 

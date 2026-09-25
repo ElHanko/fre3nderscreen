@@ -12,20 +12,21 @@ using json = nlohmann::json;
 
 class TmcStatusContainer {
  public:
-  TmcStatusContainer(KWebSocketClient &c,
-		     lv_obj_t *parent,
-		     const std::string &s);
+  TmcStatusContainer(KWebSocketClient &client,
+                     lv_obj_t *parent,
+                     const std::string &stepper_name);
   ~TmcStatusContainer();
 
-  void update(json &d);
+  void update(json &data);
 
   void update_tmc_value(const std::string &stepper_name,
-			const std::string &field_name,
-			int value);
+                        const std::string &field_name,
+                        int value);
+
  private:
   KWebSocketClient &ws;
   lv_obj_t *cont;
-  lv_obj_t* chart_cont;  
+  lv_obj_t *chart_cont;
   lv_obj_t *label;
   lv_obj_t *legend;
   lv_obj_t *chart;
@@ -39,12 +40,10 @@ class TmcStatusContainer {
   SpinBoxSelector semax_sb;
   SpinBoxSelector seup_sb;
   SpinBoxSelector sedn_sb;
-
   SpinBoxSelector toff_sb;
   SpinBoxSelector tbl_sb;
   SpinBoxSelector hstrt_sb;
   SpinBoxSelector hend_sb;
-  
 };
 
 #endif // __TMC_STATUS_CONTAINER_H__

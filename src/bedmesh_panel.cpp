@@ -1,5 +1,6 @@
 #include "bedmesh_panel.h"
 #include "state.h"
+#include "spdlog/fmt/fmt.h"
 #include "spdlog/spdlog.h"
 
 #include <vector>
@@ -7,113 +8,303 @@
 #include <algorithm>
 #include <string>
 
-LV_IMG_DECLARE(back);
-LV_IMG_DECLARE(delete_img);
-LV_IMG_DECLARE(bedmesh_img);
-LV_IMG_DECLARE(sd_img);
-
-
 static lv_color_t color_gradient(double offset);
 
-BedMeshPanel::BedMeshPanel(KWebSocketClient &c, std::mutex &l)
-  : NotifyConsumer(l)
-  , ws(c)
+namespace {
+
+constexpr uint32_t COLOR_BG = 0x080B0D;
+constexpr uint32_t COLOR_CARD = 0x11171B;
+constexpr uint32_t COLOR_CARD_PRESSED = 0x18242A;
+constexpr uint32_t COLOR_BORDER = 0x25323A;
+constexpr uint32_t COLOR_ACCENT = 0x00E5FF;
+constexpr uint32_t COLOR_TEXT = 0xFFFFFF;
+
+void style_transparent(lv_obj_t *obj)
+{
+  lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(obj, 0, 0);
+  lv_obj_set_style_border_width(obj, 0, 0);
+  lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
+}
+
+void style_card(lv_obj_t *obj)
+{
+  lv_obj_set_style_bg_color(obj, lv_color_hex(COLOR_CARD), 0);
+  lv_obj_set_style_border_width(obj, 1, 0);
+  lv_obj_set_style_border_color(obj, lv_color_hex(COLOR_BORDER), 0);
+  lv_obj_set_style_radius(obj, 8, 0);
+  lv_obj_set_style_shadow_width(obj, 0, 0);
+}
+
+void style_button(lv_obj_t *button)
+{
+  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
+  lv_obj_set_style_border_width(button, 1, 0);
+  lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
+  lv_obj_set_style_radius(button, 8, 0);
+  lv_obj_set_style_shadow_width(button, 0, 0);
+  lv_obj_set_style_bg_color(
+      button,
+      lv_color_hex(COLOR_CARD_PRESSED),
+      LV_STATE_PRESSED);
+  lv_obj_set_style_border_color(
+      button,
+      lv_color_hex(COLOR_ACCENT),
+      LV_STATE_PRESSED);
+  lv_obj_set_style_opa(button, LV_OPA_50, LV_STATE_DISABLED);
+}
+
+lv_obj_t *create_control_button(lv_obj_t *parent,
+                                const char *icon_text,
+                                const char *label_text)
+{
+  lv_obj_t *button = lv_btn_create(parent);
+  style_button(button);
+  lv_obj_set_height(button, 46);
+  lv_obj_set_flex_grow(button, 1);
+  lv_obj_set_style_pad_all(button, 4, 0);
+  lv_obj_set_style_pad_row(button, 2, 0);
+  lv_obj_set_flex_flow(button, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(
+      button,
+      LV_FLEX_ALIGN_CENTER,
+      LV_FLEX_ALIGN_CENTER,
+      LV_FLEX_ALIGN_CENTER);
+
+  lv_obj_t *icon = lv_label_create(button);
+  lv_label_set_text(icon, icon_text);
+  lv_obj_set_style_text_font(icon, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(icon, lv_color_hex(COLOR_ACCENT), 0);
+
+  lv_obj_t *label = lv_label_create(button);
+  lv_label_set_text(label, label_text);
+  lv_obj_set_style_text_font(label, &lv_font_montserrat_10, 0);
+  lv_obj_set_style_text_color(label, lv_color_hex(COLOR_TEXT), 0);
+
+  return button;
+}
+
+} // namespace
+
+BedMeshPanel::BedMeshPanel(KWebSocketClient &client,
+                           std::mutex &lock)
+  : NotifyConsumer(lock)
+  , ws(client)
   , cont(lv_obj_create(lv_scr_act()))
   , prompt(lv_obj_create(lv_scr_act()))
-  , top_cont(lv_obj_create(cont))
-  , mesh_table(lv_table_create(top_cont))
-  , profile_cont(lv_table_create(top_cont))
+  , header_cont(lv_obj_create(cont))
+  , back_btn(lv_btn_create(header_cont))
+  , title_label(lv_label_create(header_cont))
+  , content_cont(lv_obj_create(cont))
+  , mesh_table(lv_table_create(content_cont))
+  , profile_cont(lv_obj_create(content_cont))
   , profile_table(lv_table_create(profile_cont))
   , profile_info(lv_table_create(profile_cont))
-  , controls_cont(lv_obj_create(cont))
-  , save_btn(controls_cont, &sd_img, "Save Profile", &BedMeshPanel::_handle_callback, this)
-  , clear_btn(controls_cont, &delete_img, "Clear Profile", &BedMeshPanel::_handle_callback, this)
-  , calibrate_btn(controls_cont, &bedmesh_img, "Calibrate", &BedMeshPanel::_handle_callback, this)
-  , back_btn(controls_cont, &back, "Back", &BedMeshPanel::_handle_callback, this)
+  , controls_cont(lv_obj_create(content_cont))
+  , calibrate_btn(create_control_button(
+        controls_cont, LV_SYMBOL_REFRESH, "Calibrate"))
+  , clear_btn(create_control_button(
+        controls_cont, LV_SYMBOL_CLOSE, "Clear"))
+  , save_btn(create_control_button(
+        controls_cont, LV_SYMBOL_SAVE, "Save"))
   , msgbox(lv_obj_create(prompt))
   , input(lv_textarea_create(msgbox))
   , kb(lv_keyboard_create(prompt))
 {
   lv_obj_move_background(cont);
-  
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_set_style_pad_all(cont, 0, 0);
-  lv_obj_set_style_pad_row(cont, 0, 0);
-  
   lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_flex_grow(top_cont, 1);
+  lv_obj_set_style_pad_all(cont, 8, 0);
+  lv_obj_set_style_pad_row(cont, 8, 0);
+  lv_obj_set_style_border_width(cont, 0, 0);
+  lv_obj_set_style_bg_color(cont, lv_color_hex(COLOR_BG), 0);
 
-  lv_obj_set_flex_align(top_cont, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-  lv_obj_set_width(top_cont, LV_PCT(100));
-  lv_obj_clear_flag(top_cont, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_flex_flow(top_cont, LV_FLEX_FLOW_ROW);
+  static lv_coord_t root_rows[] = {
+    42,
+    LV_GRID_FR(1),
+    LV_GRID_TEMPLATE_LAST
+  };
+  static lv_coord_t root_cols[] = {
+    LV_GRID_FR(1),
+    LV_GRID_TEMPLATE_LAST
+  };
+  lv_obj_set_grid_dsc_array(cont, root_cols, root_rows);
 
-  auto screen_width = lv_disp_get_physical_hor_res(NULL);
-  if (screen_width < 800) {
-    lv_obj_set_style_text_font(mesh_table, &lv_font_montserrat_8, LV_STATE_DEFAULT);
-  } else {
-    lv_obj_set_style_text_font(mesh_table, &lv_font_montserrat_10, LV_STATE_DEFAULT);
-  }
-  auto scale = (double)screen_width / 800.0;
-  auto hscale = (double)lv_disp_get_physical_ver_res(NULL) / 480.0;
-  
-  lv_obj_set_size(profile_cont, LV_PCT(50), 340 * hscale);
+  lv_obj_set_grid_cell(
+      header_cont,
+      LV_GRID_ALIGN_STRETCH, 0, 1,
+      LV_GRID_ALIGN_STRETCH, 0, 1);
+  style_transparent(header_cont);
+
+  style_button(back_btn);
+  lv_obj_set_size(back_btn, 40, 34);
+  lv_obj_align(back_btn, LV_ALIGN_LEFT_MID, 0, 0);
+  lv_obj_add_event_cb(
+      back_btn,
+      &BedMeshPanel::_handle_callback,
+      LV_EVENT_CLICKED,
+      this);
+
+  lv_obj_t *back_label = lv_label_create(back_btn);
+  lv_label_set_text(back_label, LV_SYMBOL_LEFT);
+  lv_obj_set_style_text_font(back_label, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(back_label, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_center(back_label);
+
+  lv_label_set_text(title_label, "Bed Mesh");
+  lv_obj_set_style_text_font(title_label, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(title_label, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_center(title_label);
+
+  lv_obj_set_grid_cell(
+      content_cont,
+      LV_GRID_ALIGN_STRETCH, 0, 1,
+      LV_GRID_ALIGN_STRETCH, 1, 1);
+  style_transparent(content_cont);
+  lv_obj_set_style_pad_row(content_cont, 6, 0);
+  lv_obj_set_flex_flow(content_cont, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(
+      content_cont,
+      LV_FLEX_ALIGN_START,
+      LV_FLEX_ALIGN_START,
+      LV_FLEX_ALIGN_START);
+
+  style_card(mesh_table);
+  lv_obj_set_size(mesh_table, LV_PCT(100), 260);
+  lv_obj_set_style_text_font(
+      mesh_table,
+      &lv_font_montserrat_10,
+      LV_PART_ITEMS);
+  lv_obj_set_style_text_color(
+      mesh_table,
+      lv_color_hex(COLOR_TEXT),
+      LV_PART_ITEMS);
+  lv_obj_set_scrollbar_mode(mesh_table, LV_SCROLLBAR_MODE_AUTO);
+  lv_obj_add_flag(mesh_table, LV_OBJ_FLAG_HIDDEN);
+
+  style_card(profile_cont);
+  lv_obj_set_width(profile_cont, LV_PCT(100));
+  lv_obj_set_flex_grow(profile_cont, 1);
   lv_obj_set_style_pad_all(profile_cont, 0, 0);
-  lv_obj_set_style_border_width(profile_cont, 0, 0);  
   lv_obj_clear_flag(profile_cont, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_flex_flow(profile_cont, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(
+      profile_cont,
+      LV_FLEX_ALIGN_START,
+      LV_FLEX_ALIGN_START,
+      LV_FLEX_ALIGN_START);
+  lv_obj_add_flag(profile_cont, LV_OBJ_FLAG_HIDDEN);
 
-  // profile table
-  lv_table_set_col_width(profile_table, 0, 260 * scale);
-  lv_table_set_col_width(profile_table, 1, 50 * scale);
-  lv_table_set_col_width(profile_table, 2, 50 * scale);
-  lv_obj_set_height(profile_table, 200 * hscale);
+  const lv_coord_t content_width =
+      lv_disp_get_hor_res(nullptr) - 34;
 
-  // profile info
-  lv_table_set_col_width(profile_info, 0, 240 * scale);
-  lv_table_set_col_width(profile_info, 1, 120 * scale);
-  lv_obj_set_height(profile_info, 150 * hscale);
-  lv_obj_set_style_pad_top(profile_info, 5, LV_PART_ITEMS | LV_STATE_DEFAULT);
-  lv_obj_set_style_pad_bottom(profile_info, 5, LV_PART_ITEMS | LV_STATE_DEFAULT);
-  lv_obj_set_style_border_side(profile_info, LV_BORDER_SIDE_BOTTOM, 0);
+  lv_obj_set_width(profile_table, LV_PCT(100));
+  lv_obj_set_height(profile_table, 112);
+  lv_table_set_col_width(
+      profile_table, 0, content_width * 66 / 100);
+  lv_table_set_col_width(
+      profile_table, 1, content_width * 17 / 100);
+  lv_table_set_col_width(
+      profile_table, 2, content_width * 17 / 100);
+  lv_obj_set_style_text_font(
+      profile_table,
+      &lv_font_montserrat_12,
+      LV_PART_ITEMS);
+  lv_obj_set_scrollbar_mode(profile_table, LV_SCROLLBAR_MODE_AUTO);
 
-  // button controls
-  lv_obj_set_width(controls_cont, LV_PCT(100));
-  lv_obj_set_flex_align(controls_cont, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_width(profile_info, LV_PCT(100));
+  lv_obj_set_flex_grow(profile_info, 1);
+  lv_table_set_col_width(
+      profile_info, 0, content_width * 62 / 100);
+  lv_table_set_col_width(
+      profile_info, 1, content_width * 38 / 100);
+  lv_obj_set_style_text_font(
+      profile_info,
+      &lv_font_montserrat_10,
+      LV_PART_ITEMS);
+  lv_obj_set_style_pad_top(
+      profile_info,
+      4,
+      LV_PART_ITEMS | LV_STATE_DEFAULT);
+  lv_obj_set_style_pad_bottom(
+      profile_info,
+      4,
+      LV_PART_ITEMS | LV_STATE_DEFAULT);
+  lv_obj_set_scrollbar_mode(profile_info, LV_SCROLLBAR_MODE_AUTO);
+
+  style_transparent(controls_cont);
+  lv_obj_set_size(controls_cont, LV_PCT(100), 46);
+  lv_obj_set_style_pad_column(controls_cont, 6, 0);
   lv_obj_set_flex_flow(controls_cont, LV_FLEX_FLOW_ROW);
-  lv_obj_clear_flag(controls_cont, LV_OBJ_FLAG_SCROLLABLE);
- 
-  lv_obj_add_event_cb(mesh_table, &BedMeshPanel::_mesh_draw_cb, LV_EVENT_DRAW_PART_BEGIN, this);
-  lv_obj_add_event_cb(profile_table, &BedMeshPanel::_handle_profile_action, LV_EVENT_VALUE_CHANGED, this);
+  lv_obj_set_flex_align(
+      controls_cont,
+      LV_FLEX_ALIGN_START,
+      LV_FLEX_ALIGN_CENTER,
+      LV_FLEX_ALIGN_CENTER);
 
-  // prompt
+  lv_obj_add_event_cb(
+      calibrate_btn,
+      &BedMeshPanel::_handle_callback,
+      LV_EVENT_CLICKED,
+      this);
+  lv_obj_add_event_cb(
+      clear_btn,
+      &BedMeshPanel::_handle_callback,
+      LV_EVENT_CLICKED,
+      this);
+  lv_obj_add_event_cb(
+      save_btn,
+      &BedMeshPanel::_handle_callback,
+      LV_EVENT_CLICKED,
+      this);
+  lv_obj_add_state(save_btn, LV_STATE_DISABLED);
+
+  lv_obj_add_event_cb(
+      mesh_table,
+      &BedMeshPanel::_mesh_draw_cb,
+      LV_EVENT_DRAW_PART_BEGIN,
+      this);
+  lv_obj_add_event_cb(
+      profile_table,
+      &BedMeshPanel::_handle_profile_action,
+      LV_EVENT_VALUE_CHANGED,
+      this);
+
+  /*
+   * Keep the existing save-profile prompt behavior for the later
+   * dialog/popup rebrand pass.
+   */
   lv_obj_set_style_pad_all(prompt, 0, 0);
   lv_obj_set_size(prompt, LV_PCT(100), LV_PCT(100));
   lv_obj_clear_flag(prompt, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_add_flag(prompt, LV_OBJ_FLAG_HIDDEN);  
+  lv_obj_add_flag(prompt, LV_OBJ_FLAG_HIDDEN);
   lv_obj_set_style_bg_opa(prompt, LV_OPA_70, 0);
 
   lv_textarea_set_one_line(input, true);
   lv_obj_set_width(input, LV_PCT(100));
-  
-  // lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_set_flex_flow(msgbox, LV_FLEX_FLOW_ROW_WRAP);
-  lv_obj_set_flex_align(msgbox, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
-  lv_obj_set_style_pad_row(msgbox, 25, 0);
-  
-  lv_obj_clear_flag(msgbox, LV_OBJ_FLAG_SCROLLABLE);
 
+  lv_obj_set_flex_flow(msgbox, LV_FLEX_FLOW_ROW_WRAP);
+  lv_obj_set_flex_align(
+      msgbox,
+      LV_FLEX_ALIGN_SPACE_EVENLY,
+      LV_FLEX_ALIGN_START,
+      LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_row(msgbox, 25, 0);
+  lv_obj_clear_flag(msgbox, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_size(msgbox, LV_PCT(60), LV_PCT(40));
   lv_obj_set_style_border_width(msgbox, 2, 0);
-  lv_obj_set_style_bg_color(msgbox, lv_palette_darken(LV_PALETTE_GREY, 1), 0);
+  lv_obj_set_style_bg_color(
+      msgbox,
+      lv_palette_darken(LV_PALETTE_GREY, 1),
+      0);
   lv_obj_align(msgbox, LV_ALIGN_TOP_MID, 0, 20);
 
-  lv_obj_t * label = NULL;
-
-  label = lv_label_create(msgbox);
+  lv_obj_t *label = lv_label_create(msgbox);
   lv_obj_set_width(label, LV_PCT(100));
-  lv_label_set_text(label, "Saving the profile will restart the printer.");
+  lv_label_set_text(
+      label,
+      "Saving the profile will restart the printer.");
 
   lv_obj_t *prompt_save_btn = lv_btn_create(msgbox);
   lv_obj_t *prompt_cancel_btn = lv_btn_create(msgbox);
@@ -125,13 +316,23 @@ BedMeshPanel::BedMeshPanel(KWebSocketClient &c, std::mutex &l)
   lv_label_set_text(label, "Cancel");
   lv_obj_center(label);
 
-  lv_obj_add_event_cb(prompt_save_btn, &BedMeshPanel::_handle_prompt_save, LV_EVENT_CLICKED, this);
+  lv_obj_add_event_cb(
+      prompt_save_btn,
+      &BedMeshPanel::_handle_prompt_save,
+      LV_EVENT_CLICKED,
+      this);
+  lv_obj_add_event_cb(
+      prompt_cancel_btn,
+      &BedMeshPanel::_handle_prompt_cancel,
+      LV_EVENT_CLICKED,
+      this);
+  lv_obj_add_event_cb(
+      input,
+      &BedMeshPanel::_handle_kb_input,
+      LV_EVENT_ALL,
+      this);
 
-  lv_obj_add_event_cb(prompt_cancel_btn, &BedMeshPanel::_handle_prompt_cancel, LV_EVENT_CLICKED, this);
-
-  lv_obj_add_event_cb(input, &BedMeshPanel::_handle_kb_input, LV_EVENT_ALL, this);
   lv_keyboard_set_textarea(kb, input);
-
   lv_obj_move_background(prompt);
 
   ws.register_notify_update(this);
@@ -167,13 +368,13 @@ void BedMeshPanel::refresh_views(json &bm) {
     auto active_profile_j = bm["/profile_name"_json_pointer];
     size_t row_idx = 0;
     if(active_profile_j.is_null()) {
-      save_btn.disable();
+      lv_obj_add_state(save_btn, LV_STATE_DISABLED);
       return;
     }
 
     active_profile = active_profile_j.template get<std::string>();
     if (active_profile.length() > 0) {
-      save_btn.enable();
+      lv_obj_clear_state(save_btn, LV_STATE_DISABLED);
 
       refresh_profile_info(active_profile);
       lv_obj_clear_flag(mesh_table, LV_OBJ_FLAG_HIDDEN);
@@ -187,8 +388,12 @@ void BedMeshPanel::refresh_views(json &bm) {
 
       // calculate cell width
       if (mesh.size() > 0 && mesh[0].size() > 0) {
-	auto scale = (double)lv_disp_get_physical_hor_res(NULL) / 800.0;
-	int col_width = std::max(4, (int)(380 * scale / mesh[0].size()));
+	int available_width = std::max(
+            40,
+            (int)lv_disp_get_hor_res(nullptr) - 34);
+        int col_width = std::max(
+            4,
+            available_width / (int)mesh[0].size());
 	int cel_height = std::max(1, (int)(col_width / 2 - 8));
 
 	lv_obj_set_style_pad_top(mesh_table, cel_height, LV_PART_ITEMS | LV_STATE_DEFAULT);
@@ -215,7 +420,7 @@ void BedMeshPanel::refresh_views(json &bm) {
     } else {
       // no active profile, hide mesh matrix
       lv_obj_add_flag(mesh_table, LV_OBJ_FLAG_HIDDEN);
-      save_btn.disable();
+      lv_obj_add_state(save_btn, LV_STATE_DISABLED);
     }
 
     // populate profiles tables
@@ -310,7 +515,7 @@ void BedMeshPanel::foreground() {
 
 void BedMeshPanel::handle_callback(lv_event_t *event) {
   lv_obj_t *btn = lv_event_get_current_target(event);
-  if (btn == save_btn.get_container()) {
+  if (btn == save_btn) {
     spdlog::trace("mesh save pressed");
     lv_obj_clear_flag(prompt, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(kb, LV_OBJ_FLAG_HIDDEN);
@@ -321,11 +526,11 @@ void BedMeshPanel::handle_callback(lv_event_t *event) {
     
     lv_obj_move_foreground(prompt);
     
-  } else if (btn == clear_btn.get_container()) {
+  } else if (btn == clear_btn) {
     spdlog::trace("mesh clear pressed");
     ws.gcode_script("BED_MESH_CLEAR");
     
-  } else if (btn == calibrate_btn.get_container()) {
+  } else if (btn == calibrate_btn) {
     spdlog::trace("mesh calibrate pressed");
     auto v = State::get_instance()
       ->get_data("/printer_state/toolhead/homed_axes"_json_pointer);
@@ -337,7 +542,7 @@ void BedMeshPanel::handle_callback(lv_event_t *event) {
     }
     ws.gcode_script("G28 X Y Z\nBED_MESH_CALIBRATE");
 
-  } else if (btn == back_btn.get_container()) {
+  } else if (btn == back_btn) {
     spdlog::trace("back button pressed");
     lv_obj_move_background(cont);
   }
