@@ -147,7 +147,7 @@ MainPanel::MainPanel(KWebSocketClient &websocket,
   , console_panel(ws, lock, console_tab)
   , printertune_tab(lv_tabview_add_tab(tabview, "Tune"))
   , setting_tab(lv_tabview_add_tab(tabview, "Settings"))
-  , setting_panel(websocket, lock, setting_tab, sm)
+  , setting_panel(lock, setting_tab)
   , more_tab(lv_tabview_add_tab(tabview, "More"))
   , main_cont(lv_obj_create(main_tab))
   , print_status_panel(websocket, lock, main_cont)
@@ -719,6 +719,5 @@ void MainPanel::create_leds(json &leds) {
 
 void MainPanel::enable_spoolman() {
   spoolman_panel.init();
-  setting_panel.enable_spoolman();
   extruder_panel.enable_spoolman();
 }
