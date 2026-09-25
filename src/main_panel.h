@@ -4,7 +4,6 @@
 #include "websocket_client.h"
 #include "notify_consumer.h"
 #include "sensor_container.h"
-#include "button_container.h"
 #include "prompt_panel.h"
 #include "numpad.h"
 #include "homing_panel.h"
@@ -46,17 +45,6 @@ class MainPanel : public NotifyConsumer {
   void handle_extrude_cb(lv_event_t *event);
   void handle_fanpanel_cb(lv_event_t *event);
   void handle_ledpanel_cb(lv_event_t *event);
-  void handle_print_cb(lv_event_t *event);
-
-  lv_obj_t *create_button(lv_obj_t *parent,
-                          const void *btn_img,
-                          const char* text,
-                          lv_event_cb_t cb);
-
-  lv_obj_t *create_heater_info(lv_obj_t *parent,
-                               const void *heater_img,
-                               const char* text,
-                               lv_color_t color);
 
   static void _handle_homing_cb(lv_event_t *event) {
     MainPanel *panel = (MainPanel*)event->user_data;
@@ -76,11 +64,6 @@ class MainPanel : public NotifyConsumer {
   static void _handle_ledpanel_cb(lv_event_t *event) {
     MainPanel *panel = (MainPanel*)event->user_data;
     panel->handle_ledpanel_cb(event);
-  };
-
-  static void _handle_print_cb(lv_event_t *event) {
-    MainPanel *panel = (MainPanel*)event->user_data;
-    panel->handle_print_cb(event);
   };
 
   static void _handle_nav_cb(lv_event_t *event) {
@@ -132,8 +115,6 @@ class MainPanel : public NotifyConsumer {
   PromptPanel prompt_panel;
   SpoolmanPanel &spoolman_panel;
 
-  lv_style_t style;
-
   lv_obj_t *control_cont;
   lv_obj_t *more_cont;
   lv_obj_t *more_macros_btn;
@@ -159,10 +140,5 @@ class MainPanel : public NotifyConsumer {
 
   std::map<std::string, std::shared_ptr<SensorContainer>> sensors;
 
-  ButtonContainer homing_btn;
-  ButtonContainer extrude_btn;
-  ButtonContainer action_btn;
-  ButtonContainer led_btn;
-  ButtonContainer print_btn;
 };
 #endif // __MAIN_PANEL_H__

@@ -12,11 +12,9 @@ LV_IMG_DECLARE(filament_img);
 LV_IMG_DECLARE(light_img);
 LV_IMG_DECLARE(network_img);
 LV_IMG_DECLARE(move);
-LV_IMG_DECLARE(print);
 LV_IMG_DECLARE(extruder);
 LV_IMG_DECLARE(bed);
 LV_IMG_DECLARE(fan);
-LV_IMG_DECLARE(heater);
 
 namespace {
 
@@ -95,6 +93,39 @@ void style_dark_button(lv_obj_t *button)
   lv_obj_set_style_text_color(button, lv_color_hex(0xFFFFFF), 0);
 }
 
+lv_obj_t *create_control_card(lv_obj_t *parent,
+                              const void *image,
+                              const char *text,
+                              lv_event_cb_t callback,
+                              void *user_data)
+{
+  lv_obj_t *button = lv_btn_create(parent);
+  style_dark_button(button);
+  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(button, 10, 0);
+  lv_obj_set_style_bg_color(button, lv_color_hex(0x18242A), LV_STATE_PRESSED);
+  lv_obj_set_style_border_color(button, lv_color_hex(0x00E5FF), LV_STATE_PRESSED);
+  lv_obj_set_flex_flow(button, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(
+      button,
+      LV_FLEX_ALIGN_CENTER,
+      LV_FLEX_ALIGN_CENTER,
+      LV_FLEX_ALIGN_CENTER);
+  lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, user_data);
+
+  lv_obj_t *icon = lv_img_create(button);
+  lv_img_set_src(icon, image);
+  lv_obj_set_style_img_recolor_opa(icon, LV_OPA_COVER, 0);
+  lv_obj_set_style_img_recolor(icon, lv_color_hex(0xFFFFFF), 0);
+
+  lv_obj_t *label = lv_label_create(button);
+  lv_label_set_text(label, text);
+  lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFF), 0);
+
+  return button;
+}
+
 } // namespace
 
 MainPanel::MainPanel(KWebSocketClient &websocket,
@@ -143,18 +174,7 @@ MainPanel::MainPanel(KWebSocketClient &websocket,
   , warning_active(false)
   , temp_cont(lv_obj_create(main_cont))
   , temp_chart(lv_chart_create(main_cont))
-  , homing_btn(main_cont, &move, "Homing", &MainPanel::_handle_homing_cb, this)
-  , extrude_btn(main_cont, &filament_img, "Extrude", &MainPanel::_handle_extrude_cb, this)
-  , action_btn(main_cont, &fan, "Fans", &MainPanel::_handle_fanpanel_cb, this)
-  , led_btn(main_cont, &light_img, "LED", &MainPanel::_handle_ledpanel_cb, this)
-  , print_btn(main_cont, &print, "Print", &MainPanel::_handle_print_cb, this)
 {
-    lv_style_init(&style);
-    lv_style_set_img_recolor_opa(&style, LV_OPA_30);
-    lv_style_set_img_recolor(&style, lv_color_black());
-    lv_style_set_border_width(&style, 0);
-    lv_style_set_bg_color(&style, lv_palette_darken(LV_PALETTE_GREY, 4));
-
     ws.register_notify_update(this);
 }
 
@@ -400,14 +420,13 @@ void MainPanel::create_control()
 {
   lv_obj_set_size(control_cont, LV_PCT(100), LV_PCT(100));
   lv_obj_clear_flag(control_cont, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_style_pad_all(control_cont, 8, 0);
-  lv_obj_set_style_pad_row(control_cont, 8, 0);
-  lv_obj_set_style_pad_column(control_cont, 8, 0);
+  lv_obj_set_style_pad_all(control_cont, 12, 0);
+  lv_obj_set_style_pad_row(control_cont, 10, 0);
+  lv_obj_set_style_pad_column(control_cont, 10, 0);
   lv_obj_set_style_border_width(control_cont, 0, 0);
   lv_obj_set_style_bg_color(control_cont, lv_color_hex(0x080B0D), 0);
 
   static lv_coord_t rows[] = {
-    LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
@@ -420,32 +439,34 @@ void MainPanel::create_control()
 
   lv_obj_set_grid_dsc_array(control_cont, cols, rows);
 
-  lv_obj_set_parent(homing_btn.get_container(), control_cont);
-  lv_obj_set_parent(extrude_btn.get_container(), control_cont);
-  lv_obj_set_parent(action_btn.get_container(), control_cont);
-  lv_obj_set_parent(led_btn.get_container(), control_cont);
-  lv_obj_set_parent(print_btn.get_container(), control_cont);
+  struct ControlDef {
+    const void *image;
+    const char *text;
+    lv_event_cb_t callback;
+    uint8_t col;
+    uint8_t row;
+  };
 
-  lv_obj_set_grid_cell(
-      homing_btn.get_container(),
-      LV_GRID_ALIGN_STRETCH, 0, 1,
-      LV_GRID_ALIGN_STRETCH, 0, 1);
-  lv_obj_set_grid_cell(
-      extrude_btn.get_container(),
-      LV_GRID_ALIGN_STRETCH, 1, 1,
-      LV_GRID_ALIGN_STRETCH, 0, 1);
-  lv_obj_set_grid_cell(
-      action_btn.get_container(),
-      LV_GRID_ALIGN_STRETCH, 0, 1,
-      LV_GRID_ALIGN_STRETCH, 1, 1);
-  lv_obj_set_grid_cell(
-      led_btn.get_container(),
-      LV_GRID_ALIGN_STRETCH, 1, 1,
-      LV_GRID_ALIGN_STRETCH, 1, 1);
-  lv_obj_set_grid_cell(
-      print_btn.get_container(),
-      LV_GRID_ALIGN_STRETCH, 0, 2,
-      LV_GRID_ALIGN_STRETCH, 2, 1);
+  ControlDef controls[] = {
+    {&move, "Homing", &MainPanel::_handle_homing_cb, 0, 0},
+    {&filament_img, "Extrude", &MainPanel::_handle_extrude_cb, 1, 0},
+    {&fan, "Fans", &MainPanel::_handle_fanpanel_cb, 0, 1},
+    {&light_img, "LED", &MainPanel::_handle_ledpanel_cb, 1, 1},
+  };
+
+  for (const auto &control : controls) {
+    lv_obj_t *button = create_control_card(
+        control_cont,
+        control.image,
+        control.text,
+        control.callback,
+        this);
+
+    lv_obj_set_grid_cell(
+        button,
+        LV_GRID_ALIGN_STRETCH, control.col, 1,
+        LV_GRID_ALIGN_STRETCH, control.row, 1);
+  }
 }
 
 void MainPanel::create_more()
@@ -563,15 +584,6 @@ void MainPanel::handle_ledpanel_cb(lv_event_t *event) {
   if (lv_event_get_code(event) == LV_EVENT_CLICKED) {
     spdlog::trace("clicked led panel");
     led_panel.foreground();
-  }
-}
-
-void MainPanel::handle_print_cb(lv_event_t *event) {
-  if (lv_event_get_code(event) == LV_EVENT_CLICKED) {
-    spdlog::trace("clicked print");
-    lv_tabview_set_act(tabview, TAB_HOME, LV_ANIM_OFF);
-    set_nav_active(nav_home_btn);
-    print_panel.foreground();
   }
 }
 
