@@ -10,34 +10,35 @@
 class SensorContainer {
  public:
   SensorContainer(KWebSocketClient &c,
-		  lv_obj_t *parent,
-		  const void *img,
-		  const char *text,
-		  lv_color_t color,
-		  bool editable,
-		  bool show_target,
-		  Numpad &np,
-		  std::string name,
-		  lv_obj_t *chart,
-		  lv_chart_series_t *chart_series);
-		  
+                  lv_obj_t *parent,
+                  const void *img,
+                  const char *text,
+                  lv_color_t color,
+                  bool editable,
+                  bool show_target,
+                  Numpad &np,
+                  std::string name,
+                  lv_obj_t *chart,
+                  lv_chart_series_t *chart_series);
+
   SensorContainer(KWebSocketClient &c,
-		  lv_obj_t *parent,
-		  const void *img,
-		  uint16_t img_scale,
-		  const char *text,
-		  lv_color_t color,
-		  bool editable,
-		  bool show_target,
-		  Numpad &np,
-		  std::string name,
-		  lv_obj_t *chart,
-		  lv_chart_series_t *chart_series);
-  
+                  lv_obj_t *parent,
+                  const void *img,
+                  uint16_t img_scale,
+                  const char *text,
+                  lv_color_t color,
+                  bool editable,
+                  bool show_target,
+                  Numpad &np,
+                  std::string name,
+                  lv_obj_t *chart,
+                  lv_chart_series_t *chart_series);
+
   ~SensorContainer();
 
   lv_obj_t *get_sensor();
   void use_compact_layout();
+  void use_home_layout();
   void update_target(int new_target);
   void update_value(int new_value);
   void update_series(int value);
@@ -49,6 +50,8 @@ class SensorContainer {
   };
 
  private:
+  void refresh_home_value_style();
+
   KWebSocketClient &ws;
   lv_obj_t *sensor_cont;
   lv_obj_t *sensor_img;
@@ -63,7 +66,7 @@ class SensorContainer {
   lv_obj_t *chart;
   lv_chart_series_t *series;
   std::time_t last_updated_ts;
-  
+  bool home_layout;
 };
 
 #endif // __SENSOR_CONTAINER_H__

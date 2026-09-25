@@ -4,16 +4,16 @@
 #include <string>
 
 SensorContainer::SensorContainer(KWebSocketClient &c,
-				 lv_obj_t *parent,
-				 const void *img,
-				 const char *text,
-				 lv_color_t color,
-				 bool can_edit,
-				 bool show_target,
-				 Numpad &np,
-				 std::string name,
-				 lv_obj_t *chart_chart,
-				 lv_chart_series_t *chart_series)
+                                 lv_obj_t *parent,
+                                 const void *img,
+                                 const char *text,
+                                 lv_color_t color,
+                                 bool can_edit,
+                                 bool show_target,
+                                 Numpad &np,
+                                 std::string name,
+                                 lv_obj_t *chart_chart,
+                                 lv_chart_series_t *chart_series)
   : ws(c)
   , sensor_cont(lv_obj_create(parent))
   , sensor_img(lv_img_create(sensor_cont))
@@ -28,16 +28,12 @@ SensorContainer::SensorContainer(KWebSocketClient &c,
   , chart(chart_chart)
   , series(chart_series)
   , last_updated_ts(std::time(nullptr))
+  , home_layout(false)
 {
     lv_obj_clear_flag(sensor_cont, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_border_color(sensor_cont, color, LV_PART_MAIN);
     lv_obj_set_style_border_side(sensor_cont, LV_BORDER_SIDE_LEFT, LV_PART_MAIN);
     lv_obj_set_style_border_width(sensor_cont, 5, LV_PART_MAIN);
-
-    // auto cont_width = (double)lv_disp_get_physical_hor_res(NULL) * 0.4125;
-    // cont_width = cont_width > 330 ? 330 : cont_width;
-    // auto cont_height = (double)lv_disp_get_physical_ver_res(NULL) * 0.125;
-    // cont_height = cont_height > 60 ? 60 : cont_height;
 
     auto width_scale = (double)lv_disp_get_physical_hor_res(NULL) / 800.0;
     auto height_scale = (double)lv_disp_get_physical_ver_res(NULL) / 480.0;
@@ -70,29 +66,29 @@ SensorContainer::SensorContainer(KWebSocketClient &c,
       lv_obj_add_flag(divider_label, LV_OBJ_FLAG_HIDDEN);
     }
 
-    if (can_edit) {      
+    if (can_edit) {
       lv_obj_set_style_border_width(target_label, 2, LV_PART_MAIN);
       lv_obj_set_style_radius(target_label, 6, LV_PART_MAIN);
       lv_obj_set_style_border_color(target_label, lv_palette_darken(LV_PALETTE_GREY, 1), LV_PART_MAIN);
 
       spdlog::debug("sensor cb registered name {}, cont {}, this {}, np {}",
-		    id, fmt::ptr(sensor_cont), fmt::ptr(this), fmt::ptr(&np));
+                    id, fmt::ptr(sensor_cont), fmt::ptr(this), fmt::ptr(&np));
       lv_obj_add_event_cb(sensor_cont, &SensorContainer::_handle_edit, LV_EVENT_CLICKED, this);
-    } 
+    }
 }
 
 SensorContainer::SensorContainer(KWebSocketClient &c,
-				 lv_obj_t *parent,
-				 const void *img,
-				 uint16_t img_scale,
-				 const char *text,
-				 lv_color_t color,
-				 bool can_edit,
-				 bool show_target,
-				 Numpad &np,
-				 std::string name,
-				 lv_obj_t *chart,
-				 lv_chart_series_t *chart_series)
+                                 lv_obj_t *parent,
+                                 const void *img,
+                                 uint16_t img_scale,
+                                 const char *text,
+                                 lv_color_t color,
+                                 bool can_edit,
+                                 bool show_target,
+                                 Numpad &np,
+                                 std::string name,
+                                 lv_obj_t *chart,
+                                 lv_chart_series_t *chart_series)
   : SensorContainer(c, parent, img, text, color, can_edit, show_target, np, name, chart, chart_series)
 {
   lv_img_set_zoom(sensor_img, img_scale);
@@ -163,17 +159,67 @@ void SensorContainer::use_compact_layout()
   }
 }
 
+void SensorContainer::use_home_layout()
+{
+  home_layout = true;
+
+  lv_obj_set_size(sensor_cont, 124, 52);
+  lv_obj_set_style_pad_all(sensor_cont, 0, 0);
+  lv_obj_set_style_radius(sensor_cont, 8, LV_PART_MAIN);
+  lv_obj_set_style_border_width(sensor_cont, 1, LV_PART_MAIN);
+  lv_obj_set_style_border_side(sensor_cont, LV_BORDER_SIDE_FULL, LV_PART_MAIN);
+  lv_obj_set_style_border_color(sensor_cont, lv_color_hex(0x25323A), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(sensor_cont, lv_color_hex(0x11171B), LV_PART_MAIN);
+
+  lv_obj_add_flag(sensor_img, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(divider_label, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(target_label, LV_OBJ_FLAG_HIDDEN);
+
+  lv_obj_set_width(sensor_label, LV_SIZE_CONTENT);
+  lv_obj_set_style_text_font(sensor_label, &lv_font_montserrat_12, 0);
+  lv_obj_set_style_text_color(sensor_label, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_align(sensor_label, LV_ALIGN_TOP_LEFT, 10, 6);
+
+  lv_obj_set_width(value_label, LV_SIZE_CONTENT);
+  lv_obj_set_style_pad_all(value_label, 0, 0);
+  lv_obj_set_style_text_font(value_label, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_align(value_label, LV_TEXT_ALIGN_LEFT, 0);
+  lv_obj_align(value_label, LV_ALIGN_BOTTOM_LEFT, 10, -5);
+
+  lv_label_set_text(value_label, fmt::format("{}°", value).c_str());
+  refresh_home_value_style();
+}
+
+void SensorContainer::refresh_home_value_style()
+{
+  if (!home_layout) {
+    return;
+  }
+
+  const bool heating = target > 0 && target > value + 1;
+  lv_obj_set_style_text_color(
+      value_label,
+      heating ? lv_color_hex(0xFF3B30) : lv_color_hex(0xFFFFFF),
+      0);
+}
+
 void SensorContainer::update_target(int new_target) {
   if (new_target >= 0) {
     target = new_target;
     lv_label_set_text(target_label, fmt::format("{}", new_target).c_str());
+    refresh_home_value_style();
   }
 }
 
 void SensorContainer::update_value(int new_value) {
   if (value != new_value) {
     value = new_value;
-    lv_label_set_text(value_label, fmt::format("{}", new_value).c_str());
+    if (home_layout) {
+      lv_label_set_text(value_label, fmt::format("{}°", new_value).c_str());
+    } else {
+      lv_label_set_text(value_label, fmt::format("{}", new_value).c_str());
+    }
+    refresh_home_value_style();
   }
 }
 
