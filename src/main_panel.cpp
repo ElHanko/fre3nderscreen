@@ -144,7 +144,7 @@ MainPanel::MainPanel(KWebSocketClient &websocket,
   , macros_tab(lv_tabview_add_tab(tabview, "Macros"))
   , macros_panel(ws)
   , console_tab(lv_tabview_add_tab(tabview, "Console"))
-  , console_panel(ws, lock, console_tab)
+  , console_panel(ws, lock)
   , printertune_tab(lv_tabview_add_tab(tabview, "Tune"))
   , setting_tab(lv_tabview_add_tab(tabview, "Settings"))
   , setting_panel(lock, setting_tab)
@@ -551,7 +551,7 @@ void MainPanel::handle_more_cb(lv_event_t *event)
   if (target == more_macros_btn) {
     macros_panel.foreground();
   } else if (target == more_console_btn) {
-    lv_tabview_set_act(tabview, TAB_CONSOLE, LV_ANIM_OFF);
+    console_panel.foreground();
   } else if (target == more_tune_btn) {
     lv_tabview_set_act(tabview, TAB_TUNE, LV_ANIM_OFF);
   }
