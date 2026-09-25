@@ -4,3 +4,6 @@ build/
 *.o
 *.a
 /.idea
+
+__pycache__/
+*.pyc
