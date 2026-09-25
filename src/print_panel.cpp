@@ -1,408 +1,459 @@
 #include "print_panel.h"
-#include "file_panel.h"
+
 #include "state.h"
 #include "utils.h"
 #include "spdlog/spdlog.h"
 
-#include <map>
-#include <sstream>
+#include <algorithm>
 
-LV_IMG_DECLARE(info_img);
-LV_IMG_DECLARE(print);
-LV_IMG_DECLARE(back);
+#define SORTED_BY_NAME 1
+#define SORTED_BY_MODIFIED 2
 
-#define SORTED_BY_NAME 1 << 0
-#define SORTED_BY_MODIFIED  1 << 1
+namespace {
 
-PrintPanel::PrintPanel(KWebSocketClient &websocket, std::mutex &lock, PrintStatusPanel &ps)
+constexpr uint32_t COLOR_BG = 0x080B0D;
+constexpr uint32_t COLOR_CARD = 0x11171B;
+constexpr uint32_t COLOR_CARD_PRESSED = 0x18242A;
+constexpr uint32_t COLOR_BORDER = 0x25323A;
+constexpr uint32_t COLOR_ACCENT = 0x00E5FF;
+constexpr uint32_t COLOR_TEXT = 0xFFFFFF;
+
+lv_obj_t *create_text_button(lv_obj_t *parent,
+                             const char *text,
+                             lv_event_cb_t callback,
+                             void *user_data)
+{
+  lv_obj_t *button = lv_btn_create(parent);
+  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
+  lv_obj_set_style_border_width(button, 1, 0);
+  lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
+  lv_obj_set_style_radius(button, 8, 0);
+  lv_obj_set_style_shadow_width(button, 0, 0);
+  lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD_PRESSED), LV_STATE_PRESSED);
+  lv_obj_set_style_border_color(button, lv_color_hex(COLOR_ACCENT), LV_STATE_PRESSED);
+  lv_obj_set_style_opa(button, LV_OPA_40, LV_STATE_DISABLED);
+  lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, user_data);
+
+  lv_obj_t *label = lv_label_create(button);
+  lv_label_set_text(label, text);
+  lv_obj_set_style_text_font(label, &lv_font_montserrat_12, 0);
+  lv_obj_set_style_text_color(label, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_center(label);
+
+  return button;
+}
+
+bool is_print_active(const std::string &state)
+{
+  return state == "printing" || state == "paused";
+}
+
+} // namespace
+
+PrintPanel::PrintPanel(KWebSocketClient &websocket,
+                       std::mutex &lock,
+                       lv_obj_t *parent,
+                       PrintStatusPanel &ps)
   : NotifyConsumer(lock)
   , ws(websocket)
-  , files_cont(lv_obj_create(lv_scr_act()))
-  , prompt_cont(lv_obj_create(lv_scr_act()))
-  , msgbox(lv_obj_create(prompt_cont))
-  , job_btn(lv_btn_create(msgbox))
-  , cancel_btn(lv_btn_create(msgbox))
-  , queue_btn(lv_btn_create(msgbox))
-  , left_cont(lv_obj_create(files_cont))
-  , file_table_btns(lv_obj_create(left_cont))
-  , refresh_btn(lv_btn_create(file_table_btns))
-  , modified_sort_btn(lv_btn_create(file_table_btns))
-  , az_sort_btn(lv_btn_create(file_table_btns))
-  , file_table(lv_table_create(left_cont))
-  , file_view(lv_obj_create(files_cont))
-  , status_btn(file_view, &info_img, "Status", &PrintPanel::_handle_status_btn, this)
-  , print_btn(file_view, &print, "Print", &PrintPanel::_handle_print_callback, this)
-  , back_btn(file_view, &back, "Back", &PrintPanel::_handle_back_btn, this)
+  , cont(lv_obj_create(parent))
+  , toolbar(lv_obj_create(cont))
+  , refresh_btn(create_text_button(toolbar, LV_SYMBOL_REFRESH " Reload",
+                                   &PrintPanel::_handle_toolbar, this))
+  , modified_sort_btn(create_text_button(toolbar, "Newest",
+                                         &PrintPanel::_handle_toolbar, this))
+  , az_sort_btn(create_text_button(toolbar, "A-Z",
+                                   &PrintPanel::_handle_toolbar, this))
+  , file_table(lv_table_create(cont))
+  , detail_cont(lv_obj_create(cont))
+  , file_panel(detail_cont)
+  , action_cont(lv_obj_create(cont))
+  , status_btn(create_text_button(action_cont, "Status",
+                                  &PrintPanel::_handle_status, this))
+  , print_btn(create_text_button(action_cont, "Print",
+                                 &PrintPanel::_handle_print, this))
   , root("", "", 0)
   , cur_dir(&root)
-  , cur_file(NULL)
-  , file_panel(file_view)
+  , cur_file(nullptr)
   , print_status(ps)
-  , sorted_by(SORTED_BY_MODIFIED)
+  , sort_type(SORTED_BY_MODIFIED)
+  , has_parent_row(false)
+  , print_active(false)
 {
-  spdlog::trace("building print panel");
-  lv_obj_move_background(files_cont);
+  spdlog::trace("building Fre3nder files panel");
 
-  lv_obj_set_size(files_cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(files_cont, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_flex_flow(files_cont, LV_FLEX_FLOW_ROW);
-  lv_obj_set_style_pad_all(files_cont, 0, 0);
+  lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
+  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(cont, 8, 0);
+  lv_obj_set_style_pad_row(cont, 8, 0);
+  lv_obj_set_style_border_width(cont, 0, 0);
+  lv_obj_set_style_bg_color(cont, lv_color_hex(COLOR_BG), 0);
 
-  // left side cont
-  lv_obj_set_size(left_cont, LV_PCT(50), LV_PCT(100));
-  lv_obj_clear_flag(left_cont, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_flex_flow(left_cont, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_style_pad_all(left_cont, 0, 0);
+  static lv_coord_t rows[] = {
+    38,
+    LV_GRID_FR(1),
+    126,
+    42,
+    LV_GRID_TEMPLATE_LAST
+  };
+  static lv_coord_t cols[] = {
+    LV_GRID_FR(1),
+    LV_GRID_TEMPLATE_LAST
+  };
+  lv_obj_set_grid_dsc_array(cont, cols, rows);
 
-  // file view buttons
-  lv_obj_t * label = NULL;
-  
-  label = lv_label_create(refresh_btn);
-  lv_label_set_text(label, LV_SYMBOL_REFRESH " Reload");
-  lv_obj_center(label);
+  lv_obj_set_grid_cell(
+      toolbar,
+      LV_GRID_ALIGN_STRETCH, 0, 1,
+      LV_GRID_ALIGN_STRETCH, 0, 1);
+  lv_obj_clear_flag(toolbar, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(toolbar, 0, 0);
+  lv_obj_set_style_pad_column(toolbar, 6, 0);
+  lv_obj_set_style_border_width(toolbar, 0, 0);
+  lv_obj_set_style_bg_opa(toolbar, LV_OPA_TRANSP, 0);
+  lv_obj_set_flex_flow(toolbar, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(
+      toolbar,
+      LV_FLEX_ALIGN_SPACE_BETWEEN,
+      LV_FLEX_ALIGN_CENTER,
+      LV_FLEX_ALIGN_CENTER);
 
-  label = lv_label_create(modified_sort_btn);
-  lv_label_set_text(label, LV_SYMBOL_LIST " Modified");
-  lv_obj_center(label);
+  lv_obj_t *toolbar_buttons[] = {
+    refresh_btn,
+    modified_sort_btn,
+    az_sort_btn,
+  };
+  for (lv_obj_t *button : toolbar_buttons) {
+    lv_obj_set_height(button, LV_PCT(100));
+    lv_obj_set_flex_grow(button, 1);
+    lv_obj_set_style_pad_all(button, 4, 0);
+  }
 
-  label = lv_label_create(az_sort_btn);
-  lv_label_set_text(label, LV_SYMBOL_LIST " A-Z");
-  lv_obj_center(label);
-
-  lv_obj_add_event_cb(refresh_btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
-  lv_obj_add_event_cb(modified_sort_btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
-  lv_obj_add_event_cb(az_sort_btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
-  
-  lv_obj_set_size(file_table_btns, LV_PCT(100), LV_SIZE_CONTENT);
-  lv_obj_set_style_pad_all(file_table_btns, 2, 0);
-
-  lv_obj_clear_flag(file_table_btns, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_flex_flow(file_table_btns, LV_FLEX_FLOW_ROW);
-  lv_obj_set_flex_align(file_table_btns, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_END);
-
-  lv_obj_set_size(file_table, LV_PCT(100), LV_PCT(100));
-  lv_table_set_col_width(file_table, 0, LV_PCT(100));
+  lv_obj_set_grid_cell(
+      file_table,
+      LV_GRID_ALIGN_STRETCH, 0, 1,
+      LV_GRID_ALIGN_STRETCH, 1, 1);
   lv_table_set_col_cnt(file_table, 1);
-  lv_obj_add_event_cb(file_table, &PrintPanel::_handle_callback, LV_EVENT_ALL, this);
-  lv_obj_set_scroll_dir(file_table, LV_DIR_TOP | LV_DIR_BOTTOM);
+  lv_table_set_col_width(file_table, 0, LV_PCT(100));
+  lv_obj_set_scroll_dir(file_table, LV_DIR_VER);
+  lv_obj_add_event_cb(file_table, &PrintPanel::_handle_file_table, LV_EVENT_VALUE_CHANGED, this);
+  lv_obj_set_style_bg_color(file_table, lv_color_hex(COLOR_CARD), LV_PART_MAIN);
+  lv_obj_set_style_border_width(file_table, 1, LV_PART_MAIN);
+  lv_obj_set_style_border_color(file_table, lv_color_hex(COLOR_BORDER), LV_PART_MAIN);
+  lv_obj_set_style_radius(file_table, 8, LV_PART_MAIN);
+  lv_obj_set_style_text_font(file_table, &lv_font_montserrat_12, LV_PART_ITEMS);
+  lv_obj_set_style_text_color(file_table, lv_color_hex(COLOR_TEXT), LV_PART_ITEMS);
+  lv_obj_set_style_bg_color(file_table, lv_color_hex(COLOR_CARD), LV_PART_ITEMS);
+  lv_obj_set_style_border_color(file_table, lv_color_hex(COLOR_BORDER), LV_PART_ITEMS);
 
-  lv_obj_set_size(file_view, LV_PCT(50), LV_PCT(100));
-  lv_obj_clear_flag(file_view, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_grid_cell(
+      detail_cont,
+      LV_GRID_ALIGN_STRETCH, 0, 1,
+      LV_GRID_ALIGN_STRETCH, 2, 1);
+  lv_obj_clear_flag(detail_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(detail_cont, 0, 0);
+  lv_obj_set_style_border_width(detail_cont, 0, 0);
+  lv_obj_set_style_bg_opa(detail_cont, LV_OPA_TRANSP, 0);
 
-  static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(8), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-  static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-  lv_obj_set_grid_dsc_array(file_view, grid_main_col_dsc, grid_main_row_dsc);
-  lv_obj_set_grid_cell(file_panel.get_container(), LV_GRID_ALIGN_CENTER, 0, 3, LV_GRID_ALIGN_CENTER, 0, 1);
+  lv_obj_set_grid_cell(
+      action_cont,
+      LV_GRID_ALIGN_STRETCH, 0, 1,
+      LV_GRID_ALIGN_STRETCH, 3, 1);
+  lv_obj_clear_flag(action_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(action_cont, 0, 0);
+  lv_obj_set_style_pad_column(action_cont, 8, 0);
+  lv_obj_set_style_border_width(action_cont, 0, 0);
+  lv_obj_set_style_bg_opa(action_cont, LV_OPA_TRANSP, 0);
+  lv_obj_set_flex_flow(action_cont, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(
+      action_cont,
+      LV_FLEX_ALIGN_SPACE_BETWEEN,
+      LV_FLEX_ALIGN_CENTER,
+      LV_FLEX_ALIGN_CENTER);
 
-  lv_obj_set_grid_cell(status_btn.get_container(), LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_END, 1, 1);  
-  lv_obj_set_grid_cell(print_btn.get_container(), LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_END, 1, 1);
-  lv_obj_set_grid_cell(back_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_END, 1, 1);
+  lv_obj_t *action_buttons[] = {
+    status_btn,
+    print_btn,
+  };
+  for (lv_obj_t *button : action_buttons) {
+    lv_obj_set_height(button, LV_PCT(100));
+    lv_obj_set_flex_grow(button, 1);
+  }
 
-  lv_obj_move_foreground(back_btn.get_container());
-  lv_obj_move_foreground(print_btn.get_container());
-  lv_obj_move_foreground(status_btn.get_container());      
-
-  // prompt
-  lv_obj_add_flag(prompt_cont, LV_OBJ_FLAG_HIDDEN);  
-  lv_obj_set_size(prompt_cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(prompt_cont, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_style_bg_opa(prompt_cont, LV_OPA_70, 0);
-
-  lv_obj_set_size(msgbox, LV_PCT(60), LV_PCT(30));
-  lv_obj_set_style_border_width(msgbox, 2, 0);
-  lv_obj_set_style_bg_color(msgbox, lv_palette_darken(LV_PALETTE_GREY, 1), 0);
-  
-  lv_obj_align(msgbox, LV_ALIGN_CENTER, 0, 0);
-
-  lv_obj_add_event_cb(job_btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
-  lv_obj_align(job_btn, LV_ALIGN_BOTTOM_MID, 0, 0);
-
-  lv_obj_add_event_cb(cancel_btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
-  lv_obj_align(cancel_btn, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
-
-  lv_obj_add_event_cb(queue_btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
-  lv_obj_align(queue_btn, LV_ALIGN_BOTTOM_LEFT, 0, 0);
-  
-  label = lv_label_create(job_btn);
-  lv_label_set_text(label, "View Job");
-  lv_obj_center(label);
-
-  label = lv_label_create(cancel_btn);
-  lv_label_set_text(label, "Cancel");
-  lv_obj_center(label);
-
-  label = lv_label_create(queue_btn);
-  lv_label_set_text(label, "Queue Job");
-  lv_obj_center(label);
-
-  label = lv_label_create(msgbox);
-  lv_label_set_text(label, "Printing in progress...");
-  lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
+  file_panel.clear();
+  update_sort_style();
+  update_action_states();
 
   ws.register_notify_update(this);
 }
 
-PrintPanel::~PrintPanel() {
-  if (files_cont != NULL) {
-    lv_obj_del(files_cont);
-    files_cont = NULL;
-  }
-
-  if (prompt_cont != NULL) {
-    lv_obj_del(prompt_cont);
-    prompt_cont = NULL;
-  }
+PrintPanel::~PrintPanel()
+{
+  ws.unregister_notify_update(this);
 }
 
-void PrintPanel::populate_files(json &j) {
-  sorted_by = SORTED_BY_MODIFIED;
-  show_dir(cur_dir, SORTED_BY_MODIFIED);
-}
-
-void PrintPanel::consume(json &j) {  
-  json &pstat_state = j["/params/0/print_stats/state"_json_pointer];
-  if (pstat_state.is_null()) {
+void PrintPanel::consume(json &j)
+{
+  auto &value = j["/params/0/print_stats/state"_json_pointer];
+  if (value.is_null()) {
     return;
   }
-  
+
   std::lock_guard<std::mutex> lock(lv_lock);
-  if(pstat_state.template get<std::string>() != "printing"
-     && pstat_state.template get<std::string>() != "paused") {
-    status_btn.disable();
-  } else {
-    status_btn.enable();
-  }
+  print_active = is_print_active(value.template get<std::string>());
+  update_action_states();
 }
 
-void PrintPanel::subscribe() {
+void PrintPanel::subscribe()
+{
   ws.send_jsonrpc("server.files.list", R"({"root":"gcodes"})"_json, [this](json &d) {
     std::lock_guard<std::mutex> lock(lv_lock);
-    std::string cur_path = cur_dir->full_path;
-    root.clear();
-    cur_file = NULL;
-    cur_dir = NULL;
 
-    if (d.contains("result")) {
-      for (auto f : d["result"]) {
-        root.add_path(KUtils::split(f["path"], '/'), f["path"], f["modified"].template get<uint32_t>());
+    const std::string cur_path = cur_dir == nullptr ? "" : cur_dir->full_path;
+
+    root.clear();
+    cur_file = nullptr;
+    row_entries.clear();
+
+    if (d.contains("result") && d["result"].is_array()) {
+      for (const auto &file : d["result"]) {
+        if (!file.contains("path") || !file.contains("modified")) {
+          continue;
+        }
+        root.add_path(
+            KUtils::split(file["path"].template get<std::string>(), '/'),
+            file["path"].template get<std::string>(),
+            file["modified"].template get<uint32_t>());
       }
     }
-    Tree *dir = root.find_path(KUtils::split(cur_path, '/'));
-    // need to simply this using the directory endpoint
-    cur_dir = dir;
-    this->populate_files(d);
+
+    cur_dir = root.find_path(KUtils::split(cur_path, '/'));
+    if (cur_dir == nullptr) {
+      cur_dir = &root;
+    }
+
+    refresh_print_state();
+    show_dir();
   });
 }
 
-void PrintPanel::foreground() {
-  json &pstat_state = State::get_instance()
-    ->get_data("/printer_state/print_stats/state"_json_pointer);
-  spdlog::debug("print panel print stats {}",
-		pstat_state.is_null() ? "nil" : pstat_state.template get<std::string>());
-    
-  if (!pstat_state.is_null()
-      && pstat_state.template get<std::string>() != "printing"
-      && pstat_state.template get<std::string>() != "paused") {
-    status_btn.disable();
+void PrintPanel::handle_file_table(lv_event_t *event)
+{
+  if (lv_event_get_code(event) != LV_EVENT_VALUE_CHANGED) {
+    return;
+  }
+
+  uint16_t row = LV_TABLE_CELL_NONE;
+  uint16_t col = LV_TABLE_CELL_NONE;
+  lv_table_get_selected_cell(file_table, &row, &col);
+
+  if (row == LV_TABLE_CELL_NONE ||
+      col == LV_TABLE_CELL_NONE ||
+      row >= row_entries.size()) {
+    return;
+  }
+
+  if (has_parent_row && row == 0) {
+    if (cur_dir != nullptr && cur_dir->parent != cur_dir) {
+      cur_dir = cur_dir->parent;
+      show_dir();
+    }
+    return;
+  }
+
+  Tree *entry = row_entries[row];
+  if (entry == nullptr) {
+    return;
+  }
+
+  if (entry->is_leaf()) {
+    show_file_detail(entry);
   } else {
-    status_btn.enable();
-  }
-  
-  lv_obj_move_foreground(files_cont);
-}
-
-void PrintPanel::handle_callback(lv_event_t *e) {
-  lv_event_code_t code = lv_event_get_code(e);
-
-  if(code == LV_EVENT_VALUE_CHANGED) {
-    const char * str_fn = NULL;
-    uint16_t row;
-    uint16_t col;
-
-    lv_table_get_selected_cell(file_table, &row, &col);
-    uint16_t row_count = lv_table_get_row_cnt(file_table);
-    if (row == LV_TABLE_CELL_NONE || col == LV_TABLE_CELL_NONE || row >= row_count) {
-      return;
-    }
-
-    str_fn = lv_table_get_cell_value(file_table, row, col);
-    
-    const char *filename = str_fn+5; // +5 skips the LV_SYMBOL and spaces
-    if (std::memcmp(LV_SYMBOL_DIRECTORY, str_fn, 3) == 0) {
-      if ((strcmp(filename, "..") == 0)) {
-	if (cur_dir->parent != cur_dir) {
-	  cur_dir = cur_dir->parent;
-	  show_dir(cur_dir, sorted_by);
-	}
-      } else {
-	Tree *dir = cur_dir->get_child(filename);
-	if (dir != NULL) {
-	  cur_dir = dir;
-	  show_dir(cur_dir, sorted_by);
-	}
-      }
-    }
-    else {
-      if (cur_file != cur_dir->get_child(filename)) {
-	cur_file = cur_dir->get_child(filename);
-	show_file_detail(cur_file);
-      }
-    }
+    cur_dir = entry;
+    show_dir();
   }
 }
 
-void PrintPanel::show_dir(Tree *dir, uint32_t sort_type) {
-  uint32_t index = 0;
-  lv_table_set_cell_value_fmt(file_table, index++, 0, LV_SYMBOL_DIRECTORY "  %s", "..");
-
-  bool reversed = sorted_by & sort_type;
-  std::vector<Tree> sorted_files;
-  if (sort_type == SORTED_BY_MODIFIED) {
-    KUtils::sort_map_values<std::string, Tree>(dir->children, sorted_files, [reversed](Tree &x, Tree &y) {
-	if (x.is_leaf() && !y.is_leaf()) {
-	  return false;
-	} else if (!x.is_leaf() && y.is_leaf()) {
-	  return true;
-	}
-
-	return reversed ? x.date_modified > y.date_modified : y.date_modified > x.date_modified;
-      });
-  } else {
-    KUtils::sort_map_values<std::string, Tree>(dir->children, sorted_files, [reversed](Tree &x, Tree &y) {
-	if (x.is_leaf() && !y.is_leaf()) {
-	  return false;
-	} else if (!x.is_leaf() && y.is_leaf()) {
-	  return true;
-	}
-
-	return reversed ? x.name > y.name : y.name > x.name;
-      });
-  }
-      
-  sorted_by = (sorted_by ^ sort_type) & sort_type;
-  for (const auto &c : sorted_files) {
-    if (c.is_leaf()) {
-      lv_table_set_cell_value_fmt(file_table, index, 0, LV_SYMBOL_FILE "  %s", c.name.c_str());
-    } else {
-      lv_table_set_cell_value_fmt(file_table, index, 0, LV_SYMBOL_DIRECTORY "  %s", c.name.c_str());
-    }
-    index++;
+void PrintPanel::handle_toolbar(lv_event_t *event)
+{
+  if (lv_event_get_code(event) != LV_EVENT_CLICKED) {
+    return;
   }
 
-  lv_table_set_row_cnt(file_table, index);
-  lv_obj_scroll_to_y(file_table, 0, LV_ANIM_OFF);
+  lv_obj_t *button = lv_event_get_current_target(event);
 
-  // XXX: maybe use the directory instead of file endpoint in moonraker
-  for (auto &c : sorted_files) {
-    if (c.is_leaf()) {
-      const auto &selected = dir->children.find(c.name);
-      if (selected != dir->children.cend()) {
-	cur_file = &selected->second;
-	show_file_detail(cur_file);
-      }
-      break;
-    }
-  }
-
-}
-
-void PrintPanel::show_file_detail(Tree *f) {
-  if (f->is_leaf()) {
-    if (f->contains_metadata()) {
-      file_panel.refresh_view(f->metadata, f->full_path);
-    } else {
-      spdlog::trace("getting metadata for {}", f->name);
-      ws.send_jsonrpc("server.files.metadata",
-		      json::parse(R"({"filename":")" + f->full_path + R"("})"),
-		      [f, this](json &d) { this->handle_metadata(f, d); });
-    }
+  if (button == refresh_btn) {
+    subscribe();
+  } else if (button == modified_sort_btn) {
+    sort_type = SORTED_BY_MODIFIED;
+    show_dir();
+  } else if (button == az_sort_btn) {
+    sort_type = SORTED_BY_NAME;
+    show_dir();
   }
 }
 
-void PrintPanel::handle_metadata(Tree *f, json &j) {
-  spdlog::trace("handling metadata callback");  
-  if (f->is_leaf()) {
-    if (j.contains("result")) {
-      std::lock_guard<std::mutex> lock(lv_lock);
-      f->set_metadata(j);
-      file_panel.refresh_view(f->metadata, f->full_path);
-    }
+void PrintPanel::handle_print(lv_event_t *event)
+{
+  if (lv_event_get_code(event) != LV_EVENT_CLICKED ||
+      cur_file == nullptr ||
+      print_active) {
+    return;
   }
+
+  spdlog::debug("starting print {}", cur_file->full_path);
+  json input = {{"filename", cur_file->full_path}};
+  ws.send_jsonrpc("printer.print.start", input);
+
+  print_active = true;
+  update_action_states();
+  print_status.foreground();
 }
 
-void PrintPanel::handle_back_btn(lv_event_t *event) {
-  lv_obj_t *btn = lv_event_get_current_target(event);
-  if (btn == back_btn.get_container()) {
-    lv_obj_move_background(files_cont);
-    print_status.background();    
-  }
-}
-
-void PrintPanel::handle_print_callback(lv_event_t *event) {
-  lv_event_code_t code = lv_event_get_code(event);
-  if (code == LV_EVENT_CLICKED && cur_file != NULL) {
-
-    json &pstat_state = State::get_instance()
-      ->get_data("/printer_state/print_stats/state"_json_pointer);
-    spdlog::debug("print panel print stats {}",
-		  pstat_state.is_null() ? "nil" : pstat_state.template get<std::string>());
-    
-    if (!pstat_state.is_null()
-	&& pstat_state.template get<std::string>() != "printing"
-	&& pstat_state.template get<std::string>() != "paused") {
-      spdlog::debug("printer ready to print. print file {}", cur_file->full_path);
-	
-      // ws.send_jsonrpc("printer.gcode.script",
-      // 		    json::parse(R"({"script":"PRINT_PREPARE_CLEAR"})"));
-
-      json fname_input = {{"filename", cur_file->full_path }};
-      ws.send_jsonrpc("printer.print.start", fname_input);
-      print_status.foreground();
-
-    } else {
-      lv_obj_clear_flag(prompt_cont, LV_OBJ_FLAG_HIDDEN);
-      lv_obj_move_foreground(prompt_cont);
-    }
-  }
-}
-
-void PrintPanel::handle_status_btn(lv_event_t *event) {
-  lv_event_code_t code = lv_event_get_code(event);
-  if (code == LV_EVENT_CLICKED && cur_file != NULL) {
-    spdlog::trace("status button clicked");
+void PrintPanel::handle_status(lv_event_t *event)
+{
+  if (lv_event_get_code(event) == LV_EVENT_CLICKED && print_active) {
     print_status.foreground();
   }
 }
 
-void PrintPanel::handle_btns(lv_event_t *event) {
-  lv_event_code_t code = lv_event_get_code(event);
-  if (code == LV_EVENT_CLICKED) {
-    lv_obj_t *btn = lv_event_get_current_target(event);
-    if (cur_file != NULL) {
-      spdlog::trace("status prompt clicked");
-      if (btn == queue_btn) {
-	spdlog::trace("status prompt queue clicked");
-      }
-
-      if (btn == job_btn) {
-	spdlog::trace("status prompt job clicked");
-      }
-
-      if (btn == cancel_btn) {
-	spdlog::trace("status prompt cancel clicked");
-	lv_obj_move_background(prompt_cont);
-	lv_obj_add_flag(prompt_cont, LV_OBJ_FLAG_HIDDEN);
-      }
-    }
-
-    if (btn == refresh_btn) {
-      subscribe();
-      
-    } else if (btn == modified_sort_btn) {
-      show_dir(cur_dir, SORTED_BY_MODIFIED);
-
-    } else if (btn == az_sort_btn) {
-      show_dir(cur_dir, SORTED_BY_NAME);
-    }
+void PrintPanel::handle_metadata(const std::string &path, json &j)
+{
+  if (!j.contains("result")) {
+    return;
   }
+
+  std::lock_guard<std::mutex> lock(lv_lock);
+
+  /*
+   * Metadata replies are asynchronous. Reloading the file list rebuilds
+   * root.children, so a Tree* captured by the request could become dangling.
+   * Resolve the reply against the currently selected path instead.
+   */
+  if (cur_file == nullptr || cur_file->full_path != path) {
+    return;
+  }
+
+  cur_file->set_metadata(j);
+  file_panel.refresh_view(cur_file->metadata, cur_file->full_path);
+}
+
+void PrintPanel::show_dir()
+{
+  if (cur_dir == nullptr) {
+    cur_dir = &root;
+  }
+
+  cur_file = nullptr;
+  file_panel.clear();
+  row_entries.clear();
+
+  std::vector<Tree *> entries;
+  entries.reserve(cur_dir->children.size());
+
+  for (auto &entry : cur_dir->children) {
+    entries.push_back(&entry.second);
+  }
+
+  std::sort(entries.begin(), entries.end(), [this](const Tree *left, const Tree *right) {
+    if (left->is_leaf() != right->is_leaf()) {
+      return !left->is_leaf();
+    }
+
+    if (sort_type == SORTED_BY_MODIFIED) {
+      return left->date_modified > right->date_modified;
+    }
+
+    return left->name < right->name;
+  });
+
+  has_parent_row = cur_dir->parent != cur_dir;
+
+  uint32_t row = 0;
+  if (has_parent_row) {
+    lv_table_set_cell_value_fmt(file_table, row++, 0, LV_SYMBOL_DIRECTORY "  %s", "..");
+    row_entries.push_back(nullptr);
+  }
+
+  for (Tree *entry : entries) {
+    if (entry->is_leaf()) {
+      lv_table_set_cell_value_fmt(
+          file_table, row++, 0, LV_SYMBOL_FILE "  %s", entry->name.c_str());
+    } else {
+      lv_table_set_cell_value_fmt(
+          file_table, row++, 0, LV_SYMBOL_DIRECTORY "  %s", entry->name.c_str());
+    }
+    row_entries.push_back(entry);
+  }
+
+  lv_table_set_row_cnt(file_table, row);
+  lv_obj_scroll_to_y(file_table, 0, LV_ANIM_OFF);
+
+  update_sort_style();
+  update_action_states();
+}
+
+void PrintPanel::show_file_detail(Tree *file)
+{
+  if (file == nullptr || !file->is_leaf()) {
+    return;
+  }
+
+  cur_file = file;
+  update_action_states();
+
+  if (file->contains_metadata()) {
+    file_panel.refresh_view(file->metadata, file->full_path);
+    return;
+  }
+
+  file_panel.show_loading(file->name);
+
+  const std::string path = file->full_path;
+  ws.send_jsonrpc(
+      "server.files.metadata",
+      {{"filename", path}},
+      [path, this](json &data) { handle_metadata(path, data); });
+}
+
+void PrintPanel::refresh_print_state()
+{
+  auto &value = State::get_instance()
+      ->get_data("/printer_state/print_stats/state"_json_pointer);
+
+  if (value.is_null()) {
+    print_active = false;
+  } else {
+    print_active = is_print_active(value.template get<std::string>());
+  }
+
+  update_action_states();
+}
+
+void PrintPanel::update_action_states()
+{
+  if (print_active) {
+    lv_obj_clear_state(status_btn, LV_STATE_DISABLED);
+  } else {
+    lv_obj_add_state(status_btn, LV_STATE_DISABLED);
+  }
+
+  if (cur_file != nullptr && !print_active) {
+    lv_obj_clear_state(print_btn, LV_STATE_DISABLED);
+  } else {
+    lv_obj_add_state(print_btn, LV_STATE_DISABLED);
+  }
+}
+
+void PrintPanel::update_sort_style()
+{
+  lv_obj_set_style_border_color(
+      modified_sort_btn,
+      lv_color_hex(sort_type == SORTED_BY_MODIFIED ? COLOR_ACCENT : COLOR_BORDER),
+      0);
+  lv_obj_set_style_border_color(
+      az_sort_btn,
+      lv_color_hex(sort_type == SORTED_BY_NAME ? COLOR_ACCENT : COLOR_BORDER),
+      0);
 }

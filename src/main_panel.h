@@ -98,6 +98,7 @@ class MainPanel : public NotifyConsumer {
   lv_obj_t *tabview;
   lv_obj_t *main_tab;
   lv_obj_t *control_tab;
+  lv_obj_t *files_tab;
   lv_obj_t *macros_tab;
   MacrosPanel macros_panel;
   lv_obj_t *console_tab;

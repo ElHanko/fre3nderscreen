@@ -20,11 +20,12 @@ namespace {
 
 constexpr uint16_t TAB_HOME = 0;
 constexpr uint16_t TAB_CONTROL = 1;
-constexpr uint16_t TAB_MACROS = 2;
-constexpr uint16_t TAB_CONSOLE = 3;
-constexpr uint16_t TAB_TUNE = 4;
-constexpr uint16_t TAB_SETTINGS = 5;
-constexpr uint16_t TAB_MORE = 6;
+constexpr uint16_t TAB_FILES = 2;
+constexpr uint16_t TAB_MACROS = 3;
+constexpr uint16_t TAB_CONSOLE = 4;
+constexpr uint16_t TAB_TUNE = 5;
+constexpr uint16_t TAB_SETTINGS = 6;
+constexpr uint16_t TAB_MORE = 7;
 constexpr lv_coord_t FOOTER_HEIGHT = 56;
 
 enum class NetworkLink {
@@ -139,6 +140,7 @@ MainPanel::MainPanel(KWebSocketClient &websocket,
   , tabview(lv_tabview_create(lv_scr_act(), LV_DIR_TOP, 0))
   , main_tab(lv_tabview_add_tab(tabview, "Home"))
   , control_tab(lv_tabview_add_tab(tabview, "Control"))
+  , files_tab(lv_tabview_add_tab(tabview, "Files"))
   , macros_tab(lv_tabview_add_tab(tabview, "Macros"))
   , macros_panel(ws, lock, macros_tab)
   , console_tab(lv_tabview_add_tab(tabview, "Console"))
@@ -149,7 +151,7 @@ MainPanel::MainPanel(KWebSocketClient &websocket,
   , more_tab(lv_tabview_add_tab(tabview, "More"))
   , main_cont(lv_obj_create(main_tab))
   , print_status_panel(websocket, lock, main_cont)
-  , print_panel(ws, lock, print_status_panel)
+  , print_panel(ws, lock, files_tab, print_status_panel)
   , printertune_panel(ws, lock, printertune_tab, print_status_panel.get_finetune_panel())
   , numpad(Numpad(main_cont))
   , extruder_panel(ws, lock, numpad, sm)
@@ -265,6 +267,7 @@ void MainPanel::create_panel() {
   lv_obj_t *tabs[] = {
     main_tab,
     control_tab,
+    files_tab,
     macros_tab,
     console_tab,
     printertune_tab,
@@ -398,15 +401,8 @@ void MainPanel::handle_nav_cb(lv_event_t *event)
     lv_tabview_set_act(tabview, TAB_CONTROL, LV_ANIM_OFF);
     set_nav_active(nav_control_btn);
   } else if (target == nav_files_btn) {
-    /*
-     * PrintPanel is still a legacy full-screen overlay on lv_scr_act().
-     * Its Back button returns to the Home tab, so keep Home selected in
-     * the persistent footer state as well. The Files entry becomes a
-     * launcher until PrintPanel itself is converted into a real tab.
-     */
-    lv_tabview_set_act(tabview, TAB_HOME, LV_ANIM_OFF);
-    set_nav_active(nav_home_btn);
-    print_panel.foreground();
+    lv_tabview_set_act(tabview, TAB_FILES, LV_ANIM_OFF);
+    set_nav_active(nav_files_btn);
   } else if (target == nav_settings_btn) {
     lv_tabview_set_act(tabview, TAB_SETTINGS, LV_ANIM_OFF);
     set_nav_active(nav_settings_btn);

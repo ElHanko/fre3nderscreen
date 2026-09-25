@@ -117,7 +117,43 @@ def rpc_result(method, params):
     if method == "server.files.roots":
         return {"roots": [{"name": "gcodes", "path": "/work/runtime/gcodes", "permissions": "rw"}]}
     if method == "server.files.list":
-        return []
+        return [
+            {"path": "3DBenchy.gcode", "modified": 1790337600},
+            {"path": "Calibration/first-layer.gcode", "modified": 1790251200},
+            {"path": "Calibration/pressure-advance.gcode", "modified": 1790164800},
+        ]
+    if method == "server.files.metadata":
+        filename = params.get("filename", "") if isinstance(params, dict) else ""
+        metadata = {
+            "3DBenchy.gcode": {
+                "modified": 1790337600,
+                "estimated_time": 2573,
+                "filament_weight_total": 13,
+                "size": 3557740,
+                "thumbnails": [],
+            },
+            "Calibration/first-layer.gcode": {
+                "modified": 1790251200,
+                "estimated_time": 420,
+                "filament_weight_total": 2,
+                "size": 812400,
+                "thumbnails": [],
+            },
+            "Calibration/pressure-advance.gcode": {
+                "modified": 1790164800,
+                "estimated_time": 780,
+                "filament_weight_total": 4,
+                "size": 1240000,
+                "thumbnails": [],
+            },
+        }
+        return metadata.get(filename, {
+            "modified": 1790337600,
+            "estimated_time": 0,
+            "filament_weight_total": 0,
+            "size": 0,
+            "thumbnails": [],
+        })
     if method == "printer.info":
         return {
             "state": "ready",
