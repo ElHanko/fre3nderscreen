@@ -7,31 +7,36 @@
 
 #include <vector>
 #include <memory>
-#include <mutex>
 
 class MacrosPanel {
  public:
-  MacrosPanel(KWebSocketClient &c, std::mutex &l, lv_obj_t *parent);
+  explicit MacrosPanel(KWebSocketClient &client);
   ~MacrosPanel();
 
   void populate();
-  void handle_hide_show(lv_event_t *e);
+  void foreground();
+  void handle_callback(lv_event_t *event);
 
-  static void _handle_hide_show(lv_event_t *e) {
-    MacrosPanel *panel = (MacrosPanel*)e->user_data;
-    panel->handle_hide_show(e);
-  };
+  static void _handle_callback(lv_event_t *event) {
+    auto *panel = static_cast<MacrosPanel *>(event->user_data);
+    panel->handle_callback(event);
+  }
 
  private:
   KWebSocketClient &ws;
-  std::mutex &lv_lock;
+
   lv_obj_t *cont;
-  lv_obj_t *top_controls;
+  lv_obj_t *header_cont;
+  lv_obj_t *back_btn;
+  lv_obj_t *title_label;
+
+  lv_obj_t *content_cont;
+  lv_obj_t *controls_card;
   lv_obj_t *show_hide_switch;
   lv_obj_t *top_cont;
   lv_obj_t *kb;
-  std::vector<std::shared_ptr<MacroItem>> macro_items;
 
+  std::vector<std::shared_ptr<MacroItem>> macro_items;
 };
 
 #endif // __MACROS_PANEL_H__

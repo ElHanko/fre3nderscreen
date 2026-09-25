@@ -142,7 +142,7 @@ MainPanel::MainPanel(KWebSocketClient &websocket,
   , control_tab(lv_tabview_add_tab(tabview, "Control"))
   , files_tab(lv_tabview_add_tab(tabview, "Files"))
   , macros_tab(lv_tabview_add_tab(tabview, "Macros"))
-  , macros_panel(ws, lock, macros_tab)
+  , macros_panel(ws)
   , console_tab(lv_tabview_add_tab(tabview, "Console"))
   , console_panel(ws, lock, console_tab)
   , printertune_tab(lv_tabview_add_tab(tabview, "Tune"))
@@ -473,34 +473,69 @@ void MainPanel::create_more()
   lv_obj_set_style_pad_row(more_cont, 10, 0);
   lv_obj_set_style_border_width(more_cont, 0, 0);
   lv_obj_set_style_bg_color(more_cont, lv_color_hex(0x080B0D), 0);
-  lv_obj_set_flex_flow(more_cont, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_flex_align(
-      more_cont,
-      LV_FLEX_ALIGN_START,
-      LV_FLEX_ALIGN_CENTER,
-      LV_FLEX_ALIGN_CENTER);
+
+  static lv_coord_t rows[] = {
+    LV_GRID_FR(1),
+    LV_GRID_FR(1),
+    LV_GRID_FR(1),
+    LV_GRID_TEMPLATE_LAST
+  };
+  static lv_coord_t cols[] = {
+    LV_GRID_FR(1),
+    LV_GRID_TEMPLATE_LAST
+  };
+  lv_obj_set_grid_dsc_array(more_cont, cols, rows);
 
   struct MoreDef {
     lv_obj_t *button;
+    const char *icon;
     const char *text;
+    uint8_t row;
   };
 
   MoreDef buttons[] = {
-    {more_macros_btn, "Macros"},
-    {more_console_btn, "Console"},
-    {more_tune_btn, "Tune"},
+    {more_macros_btn, LV_SYMBOL_BARS, "Macros", 0},
+    {more_console_btn, LV_SYMBOL_EDIT, "Console", 1},
+    {more_tune_btn, LV_SYMBOL_SETTINGS, "Tune", 2},
   };
 
   for (auto &entry : buttons) {
-    lv_obj_set_size(entry.button, LV_PCT(100), 64);
     style_dark_button(entry.button);
-    lv_obj_add_event_cb(entry.button, &MainPanel::_handle_more_cb, LV_EVENT_CLICKED, this);
+    lv_obj_clear_flag(entry.button, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_pad_all(entry.button, 12, 0);
+    lv_obj_set_style_bg_color(
+        entry.button,
+        lv_color_hex(0x18242A),
+        LV_STATE_PRESSED);
+    lv_obj_set_style_border_color(
+        entry.button,
+        lv_color_hex(0x00E5FF),
+        LV_STATE_PRESSED);
+    lv_obj_set_flex_flow(entry.button, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(
+        entry.button,
+        LV_FLEX_ALIGN_CENTER,
+        LV_FLEX_ALIGN_CENTER,
+        LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_grid_cell(
+        entry.button,
+        LV_GRID_ALIGN_STRETCH, 0, 1,
+        LV_GRID_ALIGN_STRETCH, entry.row, 1);
+    lv_obj_add_event_cb(
+        entry.button,
+        &MainPanel::_handle_more_cb,
+        LV_EVENT_CLICKED,
+        this);
+
+    lv_obj_t *icon = lv_label_create(entry.button);
+    lv_label_set_text(icon, entry.icon);
+    lv_obj_set_style_text_font(icon, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(icon, lv_color_hex(0x00E5FF), 0);
 
     lv_obj_t *label = lv_label_create(entry.button);
     lv_label_set_text(label, entry.text);
     lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_center(label);
   }
 }
 
@@ -514,7 +549,7 @@ void MainPanel::handle_more_cb(lv_event_t *event)
   set_nav_active(nav_more_btn);
 
   if (target == more_macros_btn) {
-    lv_tabview_set_act(tabview, TAB_MACROS, LV_ANIM_OFF);
+    macros_panel.foreground();
   } else if (target == more_console_btn) {
     lv_tabview_set_act(tabview, TAB_CONSOLE, LV_ANIM_OFF);
   } else if (target == more_tune_btn) {
