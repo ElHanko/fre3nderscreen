@@ -13,7 +13,6 @@ directory, so simulator objects do not contaminate MIPS build output.
 
 - Docker with the Compose plugin
 - initialized repository submodules
-- `xhost` on the host for the interactive X11 mode
 
 Initialize submodules once if needed:
 
@@ -28,9 +27,39 @@ git submodule update --init --recursive
 ```
 
 The container builds Fre3nderScreen without `CROSS_COMPILE`, which activates the
-existing SDL simulator, and opens the 272x480 portrait window used for Fre3nder UI development on the host X11 display.
-The wrapper grants the current local user X access only for the duration of the
-container and removes the grant again on exit.
+existing SDL simulator. The simulator runs on a private 272x480 Xvfb display
+inside the container and is exposed locally through both VNC and noVNC:
+
+```text
+VNC:     127.0.0.1:5901
+Browser: http://127.0.0.1:6080/vnc.html?autoconnect=1&resize=scale
+```
+
+The container's VNC server listens on port 5900 internally. Docker maps it to
+host port 5901 so it does not collide with a VNC server using the host's normal
+5900 port. Both host ports are bound to `127.0.0.1`, so the simulator is not
+published to the LAN.
+
+Mouse input through VNC or noVNC is delivered to the same SDL input path used by
+the simulator. No X11 display, `xhost` permission, VNC server, or noVNC install
+is required on the host.
+
+## Simulated Moonraker
+
+The simulator starts a small Moonraker-compatible WebSocket service inside the
+same container on `127.0.0.1:7125`. Nothing is published to the host or LAN.
+
+The mock exists only to initialize the real Fre3nderScreen UI with deterministic
+development data. By default it reports:
+
+- nozzle: 21 C, target 0 C
+- bed: 52 C, target 0 C
+- printer state: ready / standby
+- no files, macros, power devices, or external components
+
+Temperature edits from the UI are accepted and the simulated temperature moves
+toward the selected target, so normal and active-heating states can both be
+checked without touching a real printer.
 
 ## Screenshot generator
 
@@ -54,8 +83,9 @@ SCREENSHOT_DELAY=5 ./dev/simulator/screenshot.sh home
 
 ## Moonraker safety
 
-The tracked simulator config points to `127.0.0.1:7125` *inside the container*.
-By default there is therefore no connection to a real printer.
+The tracked simulator config points to `127.0.0.1:7125` *inside the container*,
+which is the simulator-only Moonraker mock. By default there is therefore no
+connection to a real printer.
 
 For intentional integration testing, provide a different config from inside
 the repository mount:

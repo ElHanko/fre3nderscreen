@@ -30,6 +30,8 @@ prepare_source() {
         --exclude '/.git/' \
         --exclude '/build/' \
         --exclude '*/build/' \
+        --exclude '/libhv/include/' \
+        --exclude '/libhv/lib/' \
         --exclude '*.o' \
         --exclude '*.a' \
         --exclude '*.d' \
@@ -76,9 +78,116 @@ build_simulator() {
     fi
 }
 
+wait_for_x() {
+    display_number=$1
+    i=0
+    while [ ! -S "/tmp/.X11-unix/X$display_number" ]; do
+        i=$((i + 1))
+        if [ "$i" -ge 50 ]; then
+            echo "Xvfb did not become ready." >&2
+            cat "$RUNTIME_DIR/xvfb.log" >&2 || true
+            return 1
+        fi
+        sleep 0.1
+    done
+}
+
+start_mock_moonraker() {
+    python3 "$WORK_DIR/dev/simulator/mock_moonraker.py" \
+        >"$RUNTIME_DIR/mock-moonraker.log" 2>&1 &
+    MOCK_PID=$!
+
+    i=0
+    while :; do
+        if python3 -c 'import socket; s=socket.create_connection(("127.0.0.1", 7125), 0.1); s.close()' \
+            >/dev/null 2>&1; then
+            return 0
+        fi
+
+        if ! kill -0 "$MOCK_PID" 2>/dev/null; then
+            echo "Moonraker simulator exited during startup." >&2
+            cat "$RUNTIME_DIR/mock-moonraker.log" >&2 || true
+            return 1
+        fi
+
+        i=$((i + 1))
+        if [ "$i" -ge 50 ]; then
+            echo "Moonraker simulator did not become ready." >&2
+            cat "$RUNTIME_DIR/mock-moonraker.log" >&2 || true
+            return 1
+        fi
+        sleep 0.1
+    done
+}
+
 run_simulator() {
+    DISPLAY_NUMBER=99
+    export DISPLAY=":$DISPLAY_NUMBER"
+
+    Xvfb "$DISPLAY" -screen 0 272x480x24 -nolisten tcp -ac >"$RUNTIME_DIR/xvfb.log" 2>&1 &
+    XVFB_PID=$!
+    APP_PID=
+    VNC_PID=
+    NOVNC_PID=
+    MOCK_PID=
+
+    cleanup() {
+        for pid in "$NOVNC_PID" "$VNC_PID" "$APP_PID" "$MOCK_PID" "$XVFB_PID"; do
+            if [ -n "$pid" ]; then
+                kill "$pid" 2>/dev/null || true
+                wait "$pid" 2>/dev/null || true
+            fi
+        done
+    }
+    trap cleanup EXIT INT TERM HUP
+
+    wait_for_x "$DISPLAY_NUMBER"
+    start_mock_moonraker
+
     cd "$WORK_DIR"
-    exec ./build/bin/fre3nderscreen
+    ./build/bin/fre3nderscreen >"$RUNTIME_DIR/fre3nderscreen-stdout.log" 2>&1 &
+    APP_PID=$!
+
+    x11vnc \
+        -display "$DISPLAY" \
+        -rfbport 5900 \
+        -forever \
+        -shared \
+        -nopw \
+        >"$RUNTIME_DIR/x11vnc.log" 2>&1 &
+    VNC_PID=$!
+
+    websockify \
+        --web=/usr/share/novnc \
+        6080 \
+        localhost:5900 \
+        >"$RUNTIME_DIR/novnc.log" 2>&1 &
+    NOVNC_PID=$!
+
+    echo "Fre3nderScreen simulator is ready:"
+    echo "  VNC:        127.0.0.1:5901"
+    echo "  Browser:    http://127.0.0.1:6080/vnc.html?autoconnect=1&resize=scale"
+    echo "  Moonraker:  simulated on container-local 127.0.0.1:7125"
+
+    while :; do
+        for process in \
+            "$APP_PID:Fre3nderScreen:$RUNTIME_DIR/fre3nderscreen-stdout.log" \
+            "$VNC_PID:x11vnc:$RUNTIME_DIR/x11vnc.log" \
+            "$NOVNC_PID:noVNC:$RUNTIME_DIR/novnc.log" \
+            "$MOCK_PID:Moonraker simulator:$RUNTIME_DIR/mock-moonraker.log"
+        do
+            pid=${process%%:*}
+            rest=${process#*:}
+            name=${rest%%:*}
+            log_file=${rest#*:}
+            if ! kill -0 "$pid" 2>/dev/null; then
+                echo "$name exited unexpectedly." >&2
+                cat "$log_file" >&2 || true
+                return 1
+            fi
+        done
+        sleep 1
+    done
 }
 
 run_screenshot() {
@@ -96,33 +205,26 @@ run_screenshot() {
 
     mkdir -p /screenshots
 
-    Xvfb "$DISPLAY" -screen 0 272x480x24 -nolisten tcp -ac >/work/runtime/xvfb.log 2>&1 &
+    Xvfb "$DISPLAY" -screen 0 272x480x24 -nolisten tcp -ac >"$RUNTIME_DIR/xvfb.log" 2>&1 &
     XVFB_PID=$!
     APP_PID=
+    MOCK_PID=
 
     cleanup() {
-        if [ -n "${APP_PID:-}" ]; then
-            kill "$APP_PID" 2>/dev/null || true
-            wait "$APP_PID" 2>/dev/null || true
-        fi
-        kill "$XVFB_PID" 2>/dev/null || true
-        wait "$XVFB_PID" 2>/dev/null || true
+        for pid in "$APP_PID" "$MOCK_PID" "$XVFB_PID"; do
+            if [ -n "$pid" ]; then
+                kill "$pid" 2>/dev/null || true
+                wait "$pid" 2>/dev/null || true
+            fi
+        done
     }
     trap cleanup EXIT INT TERM HUP
 
-    i=0
-    while [ ! -S "/tmp/.X11-unix/X$DISPLAY_NUMBER" ]; do
-        i=$((i + 1))
-        if [ "$i" -ge 50 ]; then
-            echo "Xvfb did not become ready." >&2
-            cat /work/runtime/xvfb.log >&2 || true
-            exit 1
-        fi
-        sleep 0.1
-    done
+    wait_for_x "$DISPLAY_NUMBER"
+    start_mock_moonraker
 
     cd "$WORK_DIR"
-    ./build/bin/fre3nderscreen >/work/runtime/fre3nderscreen-stdout.log 2>&1 &
+    ./build/bin/fre3nderscreen >"$RUNTIME_DIR/fre3nderscreen-stdout.log" 2>&1 &
     APP_PID=$!
 
     DELAY="${SCREENSHOT_DELAY:-3}"
@@ -130,7 +232,7 @@ run_screenshot() {
 
     if ! kill -0 "$APP_PID" 2>/dev/null; then
         echo "Fre3nderScreen exited before the screenshot was captured." >&2
-        cat /work/runtime/fre3nderscreen-stdout.log >&2 || true
+        cat "$RUNTIME_DIR/fre3nderscreen-stdout.log" >&2 || true
         exit 1
     fi
 

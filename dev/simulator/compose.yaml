@@ -5,17 +5,18 @@ services:
       dockerfile: Dockerfile
     environment:
       HOME: /work/home
-      DISPLAY: "${DISPLAY:-:0}"
       HOST_UID: "${HOST_UID:-1000}"
       HOST_GID: "${HOST_GID:-1000}"
       FRE3NDERSCREEN_CONFIG_SOURCE: "${FRE3NDERSCREEN_CONFIG_SOURCE:-/src/dev/simulator/fre3nderscreen.json}"
       SIMULATOR_FORCE_REBUILD: "${SIMULATOR_FORCE_REBUILD:-0}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:5901:5900"
+      - "127.0.0.1:6080:6080"
     volumes:
       - ../..:/src:ro
       - ../../build/docker-sim:/work
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
     command: ["simulator"]
 
   screenshot:

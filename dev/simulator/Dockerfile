@@ -10,7 +10,11 @@ RUN apt-get update \
         gosu \
         imagemagick \
         libsdl2-dev \
+        novnc \
+        python3-aiohttp \
         rsync \
+        websockify \
+        x11vnc \
         xvfb \
     && rm -rf /var/lib/apt/lists/*
 
