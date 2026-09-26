@@ -24,7 +24,6 @@ namespace KUtils {
 
   std::vector<std::string> get_interfaces();
   std::string interface_ip(const std::string &interface);
-  std::string get_wifi_interface();
 
   template <typename Out>
   void split(const std::string &s, char delim, Out result);

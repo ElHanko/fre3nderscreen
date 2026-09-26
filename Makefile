@@ -24,9 +24,9 @@ WARNINGS		:= -Wall -Wextra -Wno-unused-function -Wno-error=strict-prototypes -Wp
 					-Wunreachable-code -Wno-switch-default -Wreturn-type -Wmultichar -Wformat-security -Wno-sign-compare
 CFLAGS 			?= -O3 -g0 -MD -MP -I$(LVGL_DIR)/ $(WARNINGS) 
 ifdef CROSS_COMPILE
-LDFLAGS 		?= -static -lm -Llibhv/lib -Lspdlog/build -l:libhv.a -latomic -lpthread -Lwpa_supplicant/wpa_supplicant/ -l:libwpa_client.a -lstdc++fs -l:libspdlog.a
+LDFLAGS 		?= -static -lm -Llibhv/lib -Lspdlog/build -l:libhv.a -latomic -lpthread -lstdc++fs -l:libspdlog.a
 else
-LDFLAGS 		?= -lm -Llibhv/lib -Lspdlog/build -l:libhv.a -latomic -lpthread -Lwpa_supplicant/wpa_supplicant/ -l:libwpa_client.a -lstdc++fs -l:libspdlog.a
+LDFLAGS 		?= -lm -Llibhv/lib -Lspdlog/build -l:libhv.a -latomic -lpthread -lstdc++fs -l:libspdlog.a
 endif
 BIN 			= fre3nderscreen
 BUILD_DIR 		= ./build
@@ -67,7 +67,7 @@ DEPS                    = $(addprefix $(BUILD_OBJ_DIR)/, $(patsubst %.o, %.d, $(
 OBJS 			= $(AOBJS) $(COBJS) $(MAINOBJ)
 TARGET 			= $(addprefix $(BUILD_OBJ_DIR)/, $(patsubst ./%, %, $(OBJS)))
 
-INC 				:= -I./ -I./lvgl/ -I./lv_touch_calibration -I./spdlog/include -Ilibhv/include -Iwpa_supplicant/src/common
+INC 				:= -I./ -I./lvgl/ -I./lv_touch_calibration -I./spdlog/include -Ilibhv/include
 LDLIBS	 			:= -lm
 
 DEFINES				+= -D _GNU_SOURCE -DSPDLOG_COMPILED_LIB
@@ -93,9 +93,6 @@ libspdlog.a:
 	@cmake -B $(SPDLOG_DIR)/build -S $(SPDLOG_DIR)/ -DCMAKE_CXX_COMPILER=$(CXX)
 	$(MAKE) -C $(SPDLOG_DIR)/build -j$(nproc)
 
-wpaclient:
-	$(MAKE) -C wpa_supplicant/wpa_supplicant -j$(nproc) libwpa_client.a
-
 $(BUILD_OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	@$(COMPILE_CXX) -std=c++17 $(CFLAGS) -c $< -o $@
@@ -117,9 +114,6 @@ spdlogclean:
 libhvclean:
 	$(MAKE) -C libhv clean
 
-wpaclean:
-	$(MAKE) -C wpa_supplicant/wpa_supplicant clean
-
 clean:
 	rm -rf $(BUILD_DIR)
 
@@ -131,8 +125,6 @@ uninstall:
 	$(RM) -r $(addprefix $(DESTDIR)$(bindir)/,$(BIN))
 
 build:
-	$(MAKE) wpaclean
-	$(MAKE) wpaclient
 	$(MAKE) libhvclean
 	$(MAKE) libhv.a
 	$(MAKE) spdlogclean

@@ -3,9 +3,6 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <iomanip>
-#include <experimental/filesystem>
-
-namespace fs = std::experimental::filesystem;
 
 Config *Config::instance{NULL};
 
@@ -75,7 +72,6 @@ void Config::init(std::string config_path, const std::string thumbdir) {
     data = {
       {"log_path", "/usr/data/printer_data/logs/fre3nderscreen.log"},
       {"thumbnail_path", thumbdir},
-      {"wpa_supplicant", "/var/run/wpa_supplicant"},
       {"display_sleep_sec", 600},
       {"log_level", "debug"},
       {"moonraker_api_key", false},
@@ -137,12 +133,6 @@ void Config::init(std::string config_path, const std::string thumbdir) {
 }
 std::string Config::get_thumbnail_path() {
   return get<std::string>("/thumbnail_path");
-}
-
-std::string Config::get_wifi_interface() {
-  return fs::path(get<std::string>("/wpa_supplicant"))
-    .filename()
-    .string();
 }
 
 std::string Config::get_path() {

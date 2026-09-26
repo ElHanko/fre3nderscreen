@@ -21,7 +21,7 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 
 prepare_source() {
-    mkdir -p "$WORK_DIR" "$RUNTIME_DIR/logs" "$RUNTIME_DIR/thumbnails" "$RUNTIME_DIR/wpa_supplicant" "$HOME"
+    mkdir -p "$WORK_DIR" "$RUNTIME_DIR/logs" "$RUNTIME_DIR/thumbnails" "$HOME"
 
     # Keep generated build products in /work while mirroring source changes from
     # the read-only checkout. Excluded compiler products provide an incremental
@@ -41,8 +41,7 @@ prepare_source() {
         lvgl/lvgl.mk \
         lv_drivers/lv_drivers.mk \
         libhv/Makefile \
-        spdlog/CMakeLists.txt \
-        wpa_supplicant/wpa_supplicant/Makefile
+        spdlog/CMakeLists.txt
     do
         if [ ! -e "$WORK_DIR/$required" ]; then
             echo "Missing submodule content: $required" >&2

@@ -5,6 +5,5 @@
   "moonraker_api_key": false,
   "moonraker_host": "127.0.0.1",
   "moonraker_port": 7125,
-  "thumbnail_path": "/work/runtime/thumbnails",
-  "wpa_supplicant": "/work/runtime/wpa_supplicant/wlan0"
+  "thumbnail_path": "/work/runtime/thumbnails"
 }

@@ -14,7 +14,6 @@ The current source tree uses:
 - lv_drivers
 - libhv
 - spdlog
-- wpa_supplicant client code
 
 These dependencies are not automatically permanent. During the Fre3nderScreen
 cleanup, each dependency should remain only while Fre3nderScreen still uses it.
