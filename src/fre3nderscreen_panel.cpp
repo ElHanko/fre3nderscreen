@@ -1,6 +1,7 @@
 #include "fre3nderscreen_panel.h"
 
 #include "config.h"
+#include "touch_beep.h"
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
@@ -356,6 +357,7 @@ void Fre3nderScreenPanel::handle_callback(lv_event_t *event)
         return;
       }
 
+      TouchBeep::shutdown();
       ::execl("/proc/self/exe", argv0.c_str(), static_cast<char *>(nullptr));
       const int error = errno;
       spdlog::error("Failed to restart Fre3nderScreen: {}", std::strerror(error));

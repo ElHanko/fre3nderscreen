@@ -86,6 +86,21 @@ void init(const char *input_path) {
 #endif
 }
 
+void shutdown() {
+#ifndef SIMULATOR
+    if (stop_timer != nullptr) {
+        lv_timer_del(stop_timer);
+        stop_timer = nullptr;
+    }
+
+    if (beeper_fd >= 0) {
+        (void)write_tone(0);
+        close(beeper_fd);
+        beeper_fd = -1;
+    }
+#endif
+}
+
 void feedback_cb(lv_indev_drv_t * /*drv*/, uint8_t event_code) {
 #ifndef SIMULATOR
     if (beeper_fd < 0 || event_code != LV_EVENT_CLICKED) {
