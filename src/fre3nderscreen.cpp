@@ -149,7 +149,7 @@ Fre3nderScreen *Fre3nderScreen::init(std::function<void(lv_color_t, lv_color_t)>
   ws.register_notify_update(State::get_instance());
 
   Fre3nderScreen *gs = Fre3nderScreen::get();
-  // start initializing all guppy components
+  // start initializing all Fre3nderScreen components
   std::string ws_url = fmt::format("ws://{}:{}/websocket",
                                    conf->get<std::string>("/moonraker_host"),
                                    conf->get<uint32_t>("/moonraker_port"));
