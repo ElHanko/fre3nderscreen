@@ -22,9 +22,6 @@ namespace KUtils {
 			    const std::string &fname,
 			    const std::string &dest);
 
-  std::vector<std::string> get_interfaces();
-  std::string interface_ip(const std::string &interface);
-
   template <typename Out>
   void split(const std::string &s, char delim, Out result);
 

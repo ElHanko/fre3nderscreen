@@ -8,12 +8,6 @@
 #include <time.h>
 #include <sstream>
 #include <iomanip>
-#include <sys/ioctl.h>
-#include <linux/if.h>
-#include <ifaddrs.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <cstring>
 #include <experimental/filesystem>
 #include <regex>
 
@@ -141,33 +135,6 @@ namespace KUtils {
     spdlog::trace("downloaded file size {}", size);
 
     return dest_fullpath.string();
-  }
-
-  std::vector<std::string> get_interfaces() {
-    std::vector<std::string> ifaces;
-    struct ifaddrs *addrs;
-    getifaddrs(&addrs);
-    for (struct ifaddrs *addr = addrs; addr != nullptr; addr = addr->ifa_next) {
-        if (addr->ifa_addr && addr->ifa_addr->sa_family == AF_PACKET) {
-	  ifaces.push_back(addr->ifa_name);
-        }
-    }
-
-    freeifaddrs(addrs);
-    return ifaces;
-  }
-
-  std::string interface_ip(const std::string &interface) {
-    int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-
-    struct ifreq ifr{};
-    strcpy(ifr.ifr_name, interface.c_str());
-    ioctl(fd, SIOCGIFADDR, &ifr);
-    close(fd);
-
-    char ip[INET_ADDRSTRLEN];
-    strcpy(ip, inet_ntoa(((sockaddr_in *) &ifr.ifr_addr)->sin_addr));
-    return ip;
   }
 
   template <typename Out>
