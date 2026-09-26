@@ -72,10 +72,6 @@ lv_obj_t *ButtonContainer::get_container() {
   return btn_cont;
 }
 
-lv_obj_t *ButtonContainer::get_button() {
-  return btn;
-}
-
 void ButtonContainer::disable() {
   lv_obj_add_state(btn, LV_STATE_DISABLED);
   lv_obj_add_state(btn_cont, LV_STATE_DISABLED);
@@ -91,10 +87,6 @@ void ButtonContainer::enable() {
 
 void ButtonContainer::hide() {
   lv_obj_add_flag(btn_cont, LV_OBJ_FLAG_HIDDEN);
-}
-
-void ButtonContainer::set_image(const void *img) {
-  lv_imgbtn_set_src(btn, LV_IMGBTN_STATE_RELEASED, NULL, img, NULL);
 }
 
 void ButtonContainer::handle_callback(lv_event_t *e) {

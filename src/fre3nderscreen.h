@@ -40,7 +40,6 @@ class Fre3nderScreen {
   static void new_theme_apply_cb(lv_theme_t *th, lv_obj_t *obj);
   static void handle_calibrated(lv_event_t *event);
   static void save_calibration_coeff(lv_tc_coeff_t coeff);
-  static void refresh_theme();
 };
 
 #endif  // __FRE3NDER_SCREEN_H__

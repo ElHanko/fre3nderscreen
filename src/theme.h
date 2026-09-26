@@ -10,7 +10,6 @@ using json = nlohmann::json;
 class ThemeConfig {
 private:
   static ThemeConfig *instance;
-  std::string path;
 
 protected:
   json data;
@@ -30,8 +29,6 @@ public:
   };
 
   json &get_json(const std::string &json_path);
-
-  void save();
 
   static ThemeConfig *get_instance();
 

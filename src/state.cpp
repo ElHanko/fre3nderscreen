@@ -58,11 +58,6 @@ void State::set_data(const std::string &key, json &j, const std::string &json_pa
   }
 }
 
-json &State::get_data() {
-  std::lock_guard<std::mutex> guard(lock);
-  return data;
-}
-
 json &State::get_data(const json::json_pointer& ptr) {
   std::lock_guard<std::mutex> guard(lock);
   return data[ptr];

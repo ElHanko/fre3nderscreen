@@ -165,8 +165,3 @@ lv_obj_t *FilePanel::get_container()
 {
   return file_cont;
 }
-
-const char *FilePanel::get_thumbnail_path()
-{
-  return static_cast<const char *>(lv_img_get_src(thumbnail));
-}

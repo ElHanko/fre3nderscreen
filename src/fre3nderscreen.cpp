@@ -292,23 +292,6 @@ void Fre3nderScreen::save_calibration_coeff(lv_tc_coeff_t coeff) {
   conf->save();
 }
 
-void Fre3nderScreen::refresh_theme() {
-  lv_theme_t *th = lv_theme_default_get();
-  ThemeConfig *theme_conf = ThemeConfig::get_instance();
-  auto primary_color = theme_conf->get_json("/primary_color").empty()
-                       ? lv_color_hex(0x2196F3)
-                       : lv_color_hex(std::stoul(theme_conf->get<std::string>("/primary_color"), nullptr, 16));
-
-  auto secondary_color = theme_conf->get_json("/secondary_color").empty()
-                         ? lv_color_hex(0xF44336)
-                         : lv_color_hex(std::stoul(theme_conf->get<std::string>("/secondary_color"), nullptr, 16));
-
-  lv_disp_t *disp = lv_disp_get_default();
-  lv_theme_t * new_theme =  lv_theme_default_init(disp, primary_color, secondary_color, true, th->font_normal);
-  lv_disp_set_theme(disp, new_theme);
-  lv_style_set_img_recolor(&style_imgbtn_pressed, primary_color);
-}
-
 /*Set in lv_conf.h as `LV_TICK_CUSTOM_SYS_TIME_EXPR`*/
 uint32_t custom_tick_get(void) {
   static uint64_t start_ms = 0;
