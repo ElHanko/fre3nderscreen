@@ -59,7 +59,7 @@ void InitPanel::connected(KWebSocketClient &ws) {
 	  { "namespace", "fre3nderscreen" }
 	};
 	ws.send_jsonrpc("server.database.get_item", h,
-			[](json& j) { State::get_instance()->set_data("guppysettings", j, "/result/value"); });	
+			[](json& j) { State::get_instance()->set_data("fre3nderscreen_settings", j, "/result/value"); });
 
 	// console
 	this->main_panel.subscribe();
