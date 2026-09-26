@@ -103,11 +103,6 @@ void Config::init(std::string config_path, const std::string thumbdir) {
     default_macros.merge_patch(cooldown_conf);
   }
 
-  auto &screen_init = data["/fre3nderscreen_init_script"_json_pointer];
-  if (screen_init.is_null()) {
-    screen_init = "/etc/init.d/S99fre3nderscreen";
-  }
-
   auto &log_level = data["/log_level"_json_pointer];
   if (log_level.is_null()) {
     log_level = "debug";

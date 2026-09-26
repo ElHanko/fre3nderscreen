@@ -2,14 +2,13 @@
 
 #include "config.h"
 #include "spdlog/spdlog.h"
-#include "subprocess.hpp"
 
 #include <algorithm>
-#include <experimental/filesystem>
+#include <cerrno>
+#include <cstring>
+#include <fstream>
 #include <map>
-
-namespace fs = std::experimental::filesystem;
-namespace sp = subprocess;
+#include <unistd.h>
 
 #ifdef FRE3NDERSCREEN_VERSION
 #define FS_VERSION FRE3NDERSCREEN_VERSION
@@ -347,17 +346,19 @@ void Fre3nderScreenPanel::handle_callback(lv_event_t *event)
     if (obj == restart_btn) {
       spdlog::trace("restart Fre3nderScreen pressed");
 
-      Config *conf = Config::get_instance();
-      const auto init_script = conf->get<std::string>("/fre3nderscreen_init_script");
-      const fs::path script(init_script);
-
-      if (fs::exists(script) ||
-          init_script.rfind("service fre3nderscreen", 0) == 0) {
-        sp::call({init_script, "restart"});
-      } else {
-        spdlog::warn(
-            "Failed to restart Fre3nderScreen. Did not find restart script.");
+      std::string argv0;
+      {
+        std::ifstream cmdline("/proc/self/cmdline", std::ios::binary);
+        std::getline(cmdline, argv0, '\0');
       }
+      if (argv0.empty()) {
+        spdlog::error("Failed to restart Fre3nderScreen: cannot read current command line");
+        return;
+      }
+
+      ::execl("/proc/self/exe", argv0.c_str(), static_cast<char *>(nullptr));
+      const int error = errno;
+      spdlog::error("Failed to restart Fre3nderScreen: {}", std::strerror(error));
       return;
     }
   }
