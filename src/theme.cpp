@@ -2,7 +2,6 @@
 
 #include <sys/stat.h>
 #include <fstream>
-#include <iomanip>
 #include <experimental/filesystem>
 
 namespace fs = std::experimental::filesystem;
@@ -30,9 +29,6 @@ void ThemeConfig::init(const std::string config_path) {
         {"secondary_color", "0xF44336"} // red
     };
   }
-
-  std::ofstream o(config_path);
-  o << std::setw(2) << data << std::endl;
 }
 
 json &ThemeConfig::get_json(const std::string &json_path) {
