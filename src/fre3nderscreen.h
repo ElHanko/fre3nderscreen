@@ -1,5 +1,5 @@
-#ifndef __GUPPY_SCREEN_H__
-#define __GUPPY_SCREEN_H__
+#ifndef __FRE3NDER_SCREEN_H__
+#define __FRE3NDER_SCREEN_H__
 
 #include <mutex>
 #include <functional>
@@ -13,9 +13,9 @@
 #include "spoolman_panel.h"
 #include "websocket_client.h"
 
-class GuppyScreen {
+class Fre3nderScreen {
  private:
-  static GuppyScreen *instance;
+  static Fre3nderScreen *instance;
   static lv_style_t style_container;
   static lv_style_t style_imgbtn_pressed;
   static lv_style_t style_imgbtn_disabled;
@@ -29,13 +29,13 @@ class GuppyScreen {
   InitPanel init_panel;
 
  public:
-  GuppyScreen();
-  GuppyScreen(GuppyScreen &o) = delete;
-  void operator=(const GuppyScreen &) = delete;
+  Fre3nderScreen();
+  Fre3nderScreen(Fre3nderScreen &o) = delete;
+  void operator=(const Fre3nderScreen &) = delete;
 
   void connect_ws(const std::string &url);
-  static GuppyScreen *get();
-  static GuppyScreen *init(std::function<void(lv_color_t, lv_color_t)> hal_init);
+  static Fre3nderScreen *get();
+  static Fre3nderScreen *init(std::function<void(lv_color_t, lv_color_t)> hal_init);
   static void loop();
   static void new_theme_apply_cb(lv_theme_t *th, lv_obj_t *obj);
   static void handle_calibrated(lv_event_t *event);
@@ -43,4 +43,4 @@ class GuppyScreen {
   static void refresh_theme();
 };
 
-#endif  // __GUPPY_SCREEN_H__
+#endif  // __FRE3NDER_SCREEN_H__

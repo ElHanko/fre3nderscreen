@@ -1,4 +1,4 @@
-#include "guppyscreen.h"
+#include "fre3nderscreen.h"
 
 #include "config.h"
 #include "lv_drivers/display/fbdev.h"
@@ -16,13 +16,13 @@
 #include "state.h"
 #include "theme.h"
 
-GuppyScreen *GuppyScreen::instance = NULL;
-lv_style_t GuppyScreen::style_container;
-lv_style_t GuppyScreen::style_imgbtn_pressed;
-lv_style_t GuppyScreen::style_imgbtn_disabled;
-lv_theme_t GuppyScreen::th_new;
+Fre3nderScreen *Fre3nderScreen::instance = NULL;
+lv_style_t Fre3nderScreen::style_container;
+lv_style_t Fre3nderScreen::style_imgbtn_pressed;
+lv_style_t Fre3nderScreen::style_imgbtn_disabled;
+lv_theme_t Fre3nderScreen::th_new;
 
-lv_obj_t *GuppyScreen::screen_saver = NULL;
+lv_obj_t *Fre3nderScreen::screen_saver = NULL;
 #ifndef SIMULATOR
 namespace {
 
@@ -46,11 +46,11 @@ bool set_backlight_power(const char *path, char value) {
 }
 #endif
 
-KWebSocketClient GuppyScreen::ws(NULL);
+KWebSocketClient Fre3nderScreen::ws(NULL);
 
-std::mutex GuppyScreen::lv_lock;
+std::mutex Fre3nderScreen::lv_lock;
 
-GuppyScreen::GuppyScreen()
+Fre3nderScreen::Fre3nderScreen()
   : spoolman_panel(ws, lv_lock)
   , main_panel(ws, lv_lock, spoolman_panel)
   , init_panel(main_panel, main_panel.get_tune_panel().get_bedmesh_panel(), lv_lock)
@@ -58,15 +58,15 @@ GuppyScreen::GuppyScreen()
   main_panel.create_panel();
 }
 
-GuppyScreen *GuppyScreen::get() {
+Fre3nderScreen *Fre3nderScreen::get() {
   if (instance == NULL) {
-    instance = new GuppyScreen();
+    instance = new Fre3nderScreen();
   }
 
   return instance;
 }
 
-GuppyScreen *GuppyScreen::init(std::function<void(lv_color_t, lv_color_t)> hal_init) {
+Fre3nderScreen *Fre3nderScreen::init(std::function<void(lv_color_t, lv_color_t)> hal_init) {
   hlog_disable();
 
   // config
@@ -141,14 +141,14 @@ GuppyScreen *GuppyScreen::init(std::function<void(lv_color_t, lv_color_t)> hal_i
 
   /*Set the parent theme and the style apply callback for the new theme*/
   lv_theme_set_parent(&th_new, th_act);
-  lv_theme_set_apply_cb(&th_new, &GuppyScreen::new_theme_apply_cb);
+  lv_theme_set_apply_cb(&th_new, &Fre3nderScreen::new_theme_apply_cb);
 
   /*Assign the new theme to the current display*/
   lv_disp_set_theme(NULL, &th_new);
 
   ws.register_notify_update(State::get_instance());
 
-  GuppyScreen *gs = GuppyScreen::get();
+  Fre3nderScreen *gs = Fre3nderScreen::get();
   // start initializing all guppy components
   std::string ws_url = fmt::format("ws://{}:{}/websocket",
                                    conf->get<std::string>("/moonraker_host"),
@@ -173,13 +173,13 @@ GuppyScreen *GuppyScreen::init(std::function<void(lv_color_t, lv_color_t)> hal_i
     if (is_calibrated) {
       auto calibration_coeff = conf->get_json("/touch_calibration_coeff");
       if (calibration_coeff.is_null()) {
-        lv_tc_register_coeff_save_cb(&GuppyScreen::save_calibration_coeff);
+        lv_tc_register_coeff_save_cb(&Fre3nderScreen::save_calibration_coeff);
         lv_obj_t *touch_calibrate_scr = lv_tc_screen_create();
 
         lv_disp_load_scr(touch_calibrate_scr);
 
         lv_tc_screen_start(touch_calibrate_scr);
-        lv_obj_add_event_cb(touch_calibrate_scr, &GuppyScreen::handle_calibrated, LV_EVENT_READY, main_screen);
+        lv_obj_add_event_cb(touch_calibrate_scr, &Fre3nderScreen::handle_calibrated, LV_EVENT_READY, main_screen);
         spdlog::info("running touch calibration");
       } else {
         // load calibration data
@@ -195,7 +195,7 @@ GuppyScreen *GuppyScreen::init(std::function<void(lv_color_t, lv_color_t)> hal_i
   return gs;
 }
 
-void GuppyScreen::loop() {
+void Fre3nderScreen::loop() {
   /*Handle LitlevGL tasks (tickless mode)*/
 #ifndef SIMULATOR
   std::atomic_bool is_sleeping(false);
@@ -259,14 +259,14 @@ void GuppyScreen::loop() {
   }
 }
 
-void GuppyScreen::connect_ws(const std::string &url) {
+void Fre3nderScreen::connect_ws(const std::string &url) {
   init_panel.set_message(LV_SYMBOL_WARNING " Waiting for printer to initialize...");
   ws.connect(url.c_str(),
    [this]() { init_panel.connected(ws); },
    [this]() { init_panel.disconnected(ws); });
 }
 
-void GuppyScreen::new_theme_apply_cb(lv_theme_t *th, lv_obj_t *obj) {
+void Fre3nderScreen::new_theme_apply_cb(lv_theme_t *th, lv_obj_t *obj) {
   LV_UNUSED(th);
 
   if (lv_obj_check_type(obj, &lv_obj_class)) {
@@ -279,20 +279,20 @@ void GuppyScreen::new_theme_apply_cb(lv_theme_t *th, lv_obj_t *obj) {
   }
 }
 
-void GuppyScreen::handle_calibrated(lv_event_t *event) {
+void Fre3nderScreen::handle_calibrated(lv_event_t *event) {
   spdlog::info("finished calibration");
   lv_obj_t *main_screen = (lv_obj_t *)event->user_data;
   lv_disp_load_scr(main_screen);
 }
 
-void GuppyScreen::save_calibration_coeff(lv_tc_coeff_t coeff) {
+void Fre3nderScreen::save_calibration_coeff(lv_tc_coeff_t coeff) {
   Config *conf = Config::get_instance();
   conf->set<std::vector<float>>("/touch_calibration_coeff",
                                 {coeff.a, coeff.b, coeff.c, coeff.d, coeff.e, coeff.f});
   conf->save();
 }
 
-void GuppyScreen::refresh_theme() {
+void Fre3nderScreen::refresh_theme() {
   lv_theme_t *th = lv_theme_default_get();
   ThemeConfig *theme_conf = ThemeConfig::get_instance();
   auto primary_color = theme_conf->get_json("/primary_color").empty()

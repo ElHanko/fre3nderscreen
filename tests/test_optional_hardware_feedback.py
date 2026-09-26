@@ -5,7 +5,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 
 main = (root / "src" / "main.cpp").read_text()
-screen = (root / "src" / "guppyscreen.cpp").read_text()
+screen = (root / "src" / "fre3nderscreen.cpp").read_text()
 beep = (root / "src" / "touch_beep.cpp").read_text()
 
 assert "FRE3NDERSCREEN_BEEPER_INPUT" in main

@@ -25,7 +25,7 @@ static int tick_thread(void *data);
 
 static void hal_init(lv_color_t p, lv_color_t s);
 
-#include "guppyscreen.h"
+#include "fre3nderscreen.h"
 #include "hv/hlog.h"
 #include "config.h"
 #include "touch_beep.h"
@@ -48,8 +48,8 @@ int main(void)
         : fs::canonical("/proc/self/exe").parent_path() / "fre3nderscreen.json";
     conf->init(config_path.string(), "/usr/data/printer_data/thumbnails");
 
-    GuppyScreen::init(hal_init);
-    GuppyScreen::loop();
+    Fre3nderScreen::init(hal_init);
+    Fre3nderScreen::loop();
     return 0;
 }
 
