@@ -67,6 +67,17 @@ in `LICENSE`.
 
 Third-party components retain their own licenses.
 
+The unchanged `assets/dejavusans_mono_14.c` was inherited from Guppy Screen.
+Its name identifies DejaVu Sans Mono; the original font version and TTF file
+cannot be reconstructed from this repository. See the
+[DejaVu Fonts License](licenses/DEJAVU-FONTS-LICENSE.txt) (Bitstream Vera derived
+terms).
+
+The unchanged `assets/material_svg/` tree was inherited from Guppy Screen,
+which credits Pictogrammers' Material Design Icons. The still-used compiled
+counterparts in `assets/material_46/` derive from these SVG sources. See the
+[Apache License 2.0](licenses/MATERIAL-DESIGN-ICONS-LICENSE.txt).
+
 ## Credits
 
 Fre3nderScreen builds on work from Guppy Screen and its upstream dependencies,
