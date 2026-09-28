@@ -751,8 +751,8 @@ void PrintStatusPanel::handle_metadata(const std::string &gcode_file,
         static_cast<uint32_t>(
             (70.0 / static_cast<double>(thumb_detail.second)) * 256.0);
 
-    lv_img_set_src(thumbnail, image_path.c_str());
     lv_img_set_zoom(thumbnail, zoom);
+    lv_img_set_src(thumbnail, image_path.c_str());
     mini_print_status.update_img(image_path, thumb_detail.second);
   }
 }
