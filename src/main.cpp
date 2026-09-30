@@ -48,6 +48,13 @@ int main(void)
         : fs::canonical("/proc/self/exe").parent_path() / "fre3nderscreen.json";
     conf->init(config_path.string(), "/usr/data/printer_data/thumbnails");
 
+#ifndef SIMULATOR
+    const char *framebuffer_env = std::getenv("FRE3NDERSCREEN_FRAMEBUFFER");
+    if (framebuffer_env != NULL && framebuffer_env[0] != '\0') {
+        fbdev_set_file(framebuffer_env);
+    }
+#endif
+
     Fre3nderScreen::init(hal_init);
     Fre3nderScreen::loop();
     return 0;

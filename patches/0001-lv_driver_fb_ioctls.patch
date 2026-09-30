@@ -2,10 +2,29 @@ diff --git a/display/fbdev.c b/display/fbdev.c
 index fe8d2ff..e8f0928 100644
 --- a/display/fbdev.c
 +++ b/display/fbdev.c
-@@ -166,6 +166,30 @@ void fbdev_exit(void)
+@@ -75,3 +75,4 @@ static struct fb_fix_screeninfo finfo;
+ static char *fbp = 0;
+ static long int screensize = 0;
++static const char *fbdev_file = FBDEV_PATH;
+ static int fbfd = 0;
+@@ -91,7 +92,7 @@ static int fbfd = 0;
+ void fbdev_init(void)
+ {
+     // Open the file for reading and writing
+-    fbfd = open(FBDEV_PATH, O_RDWR);
++    fbfd = open(fbdev_file, O_RDWR);
+     if(fbfd == -1) {
+         perror("Error: cannot open framebuffer device");
+         return;
+@@ -166,6 +167,35 @@ void fbdev_exit(void)
      close(fbfd);
  }
  
++void fbdev_set_file(const char *path)
++{
++    fbdev_file = path;
++}
++
 +void fbdev_blank(void) {
 +  if (ioctl(fbfd, FBIOBLANK, FB_BLANK_NORMAL) == -1) {
 +    LV_LOG_INFO("Failed to blank display");
@@ -37,10 +56,11 @@ diff --git a/display/fbdev.h b/display/fbdev.h
 index b7f2c81..5e91f91 100644
 --- a/display/fbdev.h
 +++ b/display/fbdev.h
-@@ -42,6 +42,8 @@ extern "C" {
+@@ -42,6 +42,9 @@ extern "C" {
   **********************/
  void fbdev_init(void);
  void fbdev_exit(void);
++void fbdev_set_file(const char *path);
 +void fbdev_blank(void);
 +void fbdev_unblank(void);
  void fbdev_flush(lv_disp_drv_t * drv, const lv_area_t * area, lv_color_t * color_p);

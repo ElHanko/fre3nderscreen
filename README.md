@@ -38,6 +38,7 @@ Fre3nderScreen currently supports these runtime environment variables:
 
 - `FRE3NDERSCREEN_CONFIG`
 - `FRE3NDERSCREEN_THEME_DIR`
+- `FRE3NDERSCREEN_FRAMEBUFFER` (defaults to `/dev/fb0`)
 - `FRE3NDERSCREEN_INPUT`
 - `FRE3NDERSCREEN_BEEPER_INPUT`
 - `FRE3NDERSCREEN_BACKLIGHT_POWER`
