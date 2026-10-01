@@ -36,7 +36,9 @@ devices.
 Source commit `14cd41599f1ee8dec659b282e54762fd61552c5a` was hardware-
 qualified on the reference printer in the development package
 `2026.1.14cd415-fre3nder.0.4796448` (`release_serial = 0`). This is separate
-from the release source pin `2026.1.1` in Fre3nder.
+from the prepared release source pin `2026.2` in Fre3nder at commit
+`63e7ecb9fff980b53f4987ef9994675aecf9e0a2`. The `2026.2` release binary has
+not yet been built or hardware-qualified.
 
 The standalone host simulator remains useful for UI development.
 
