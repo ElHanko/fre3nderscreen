@@ -26,9 +26,17 @@ those targets is expected to be removed as the fork is simplified.
 
 ## Integration
 
-Fre3nderScreen is built and integrated by the Fre3nder repository. The
-Fre3nder system owns the target toolchain, service integration, configuration
-placement, runtime devices, and release packaging.
+The Fre3nder repository cross-builds a neutral X2000 app artifact from this
+source. `fre3nder-apps` imports it, builds and signs the `.fre3app`; Fre3nder
+then embeds the finished package as a factory seed in its RootFS. On a fresh
+persistent system, the package core installs it and selects it as the display
+frontend. Fre3nder owns the target toolchain, platform services, and runtime
+devices.
+
+Source commit `14cd41599f1ee8dec659b282e54762fd61552c5a` was hardware-
+qualified on the reference printer in the development package
+`2026.1.14cd415-fre3nder.0.4796448` (`release_serial = 0`). This is separate
+from the release source pin `2026.1.1` in Fre3nder.
 
 The standalone host simulator remains useful for UI development.
 

@@ -22,12 +22,14 @@ cleanup, each dependency should remain only while Fre3nderScreen still uses it.
 
 ### Fre3nder target
 
-The Fre3nder repository owns the target toolchain and production integration.
-Use its Fre3nderScreen component build path for target artifacts.
+The Fre3nder repository owns the target toolchain and cross-builds a neutral
+X2000 app artifact. `fre3nder-apps` imports that artifact and builds and signs
+the `.fre3app`. Fre3nder embeds the finished package as a factory seed; its
+package core installs and selects the app on a fresh persistent system.
 
 This repository intentionally does not ship K1, Debian/Raspberry Pi, Android,
-standalone installer, or release-packaging paths. Production packaging and
-deployment belong to Fre3nder.
+standalone installer, or release-packaging paths. Package construction belongs
+to `fre3nder-apps`; platform integration and deployment belong to Fre3nder.
 
 The application build accepts:
 
