@@ -32,3 +32,19 @@ assert "set_backlight_power(backlight_power, '0')" in screen
 assert "LV_OBJ_FLAG_CLICKABLE" in screen
 
 print("optional hardware feedback checks passed")
+
+vt = (root / "src/virtual_terminal.cpp").read_text()
+assert "VirtualTerminal::flush" in main
+for interface in ("VT_SETMODE", "VT_RELDISP", "VT_ACTIVATE", "VT_WAITACTIVE", "KD_GRAPHICS", "KD_TEXT", "TIOCSCTTY"):
+    assert interface in vt
+assert "if (active) fbdev_flush" in vt
+assert "else lv_disp_flush_ready" in vt
+assert "active = false; // No framebuffer writes" in vt
+assert "lv_indev_enable(touch, false)" in screen
+assert "evdev_read(touch->driver, &ignored)" in screen
+assert "lv_obj_invalidate(lv_scr_act())" in screen
+assert "vt_active && display_sleep != -1" in screen
+assert "VirtualTerminal::activate();" in screen
+assert screen.index("VirtualTerminal::activate();") < screen.index("std::ofstream(ready_file)")
+assert "TouchBeep::shutdown();" in screen
+print("VT handoff static checks passed")

@@ -29,6 +29,7 @@ static void hal_init(lv_color_t p, lv_color_t s);
 #include "hv/hlog.h"
 #include "config.h"
 #include "touch_beep.h"
+#include "virtual_terminal.h"
 
 #include <algorithm>
 
@@ -55,8 +56,25 @@ int main(void)
     }
 #endif
 
-    Fre3nderScreen::init(hal_init);
-    Fre3nderScreen::loop();
+#ifndef SIMULATOR
+    const char *ready_file = std::getenv("FRE3NDERSCREEN_READY_FILE");
+    try {
+        VirtualTerminal::init(std::getenv("FRE3NDERSCREEN_VT"));
+#endif
+        Fre3nderScreen::init(hal_init);
+        Fre3nderScreen::loop();
+#ifndef SIMULATOR
+    } catch (const std::exception &error) {
+        spdlog::error("display startup/runtime failed: {}", error.what());
+        TouchBeep::shutdown();
+        VirtualTerminal::shutdown();
+        if (ready_file != nullptr) unlink(ready_file);
+        return 1;
+    }
+    TouchBeep::shutdown();
+    VirtualTerminal::shutdown();
+    if (ready_file != nullptr) unlink(ready_file);
+#endif
     return 0;
 }
 
@@ -75,12 +93,14 @@ static void hal_init(lv_color_t primary, lv_color_t secondary) {
     static lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
     disp_drv.draw_buf   = &disp_buf;
-    disp_drv.flush_cb   = fbdev_flush;
+    disp_drv.flush_cb   = VirtualTerminal::flush;
 
     uint32_t width;
     uint32_t height;
     uint32_t dpi;
     fbdev_get_sizes(&width, &height, &dpi);
+    if (width != 480 || height != 272)
+        throw std::runtime_error("480x272 framebuffer is not initialized");
     
     disp_drv.hor_res    = width;
     disp_drv.ver_res    = height;

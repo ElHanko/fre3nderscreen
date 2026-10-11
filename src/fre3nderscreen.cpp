@@ -9,10 +9,13 @@
 #include "spdlog/spdlog.h"
 
 #include <cstdlib>
+#include <fstream>
 #ifndef SIMULATOR
   #include <fcntl.h>
   #include <unistd.h>
 #endif
+#include "virtual_terminal.h"
+#include "touch_beep.h"
 #include "state.h"
 #include "theme.h"
 
@@ -224,13 +227,66 @@ void Fre3nderScreen::loop() {
   const char *backlight_power = std::getenv("FRE3NDERSCREEN_BACKLIGHT_POWER");
 #endif
 
+#ifndef SIMULATOR
+  {
+    std::lock_guard<std::mutex> lock(lv_lock);
+    VirtualTerminal::activate();
+    lv_obj_invalidate(lv_scr_act());
+    lv_obj_invalidate(lv_layer_top());
+    lv_obj_invalidate(lv_layer_sys());
+    lv_refr_now(nullptr);
+    const char *ready_file = std::getenv("FRE3NDERSCREEN_READY_FILE");
+    if (ready_file == nullptr || !std::ofstream(ready_file).put('1'))
+      throw std::runtime_error("cannot report display readiness");
+  }
+  bool vt_active = true;
+  lv_indev_t *touch = lv_indev_get_next(nullptr);
+#endif
   while (1) {
-    lv_lock.lock();
+    std::unique_lock<std::mutex> lock(lv_lock);
+#ifndef SIMULATOR
+    auto event = VirtualTerminal::poll();
+    if (event == VirtualTerminal::Stop) {
+      if (vt_active) {
+        fbdev_unblank();
+        (void)set_backlight_power(backlight_power, '0');
+      }
+      break;
+    }
+    if (event == VirtualTerminal::Release) {
+      vt_active = false;
+      lv_indev_enable(touch, false);
+      TouchBeep::shutdown();
+      // Leave tty1 visible even if the UI was in standby.
+      fbdev_unblank();
+      (void)set_backlight_power(backlight_power, '0');
+      is_sleeping = false;
+      lv_obj_move_background(screen_saver);
+      VirtualTerminal::acknowledge(false);
+    }
+    if (!vt_active || event == VirtualTerminal::Acquire) {
+      lv_indev_data_t ignored = {};
+      evdev_read(touch->driver, &ignored); // Drain touches made on the text VT.
+    }
+    if (event == VirtualTerminal::Acquire) {
+      VirtualTerminal::acknowledge(true);
+      vt_active = true;
+      fbdev_unblank();
+      (void)set_backlight_power(backlight_power, '0');
+      lv_indev_reset(touch, nullptr);
+      lv_indev_wait_release(touch);
+      lv_indev_enable(touch, true);
+      TouchBeep::init(std::getenv("FRE3NDERSCREEN_BEEPER_INPUT"));
+      lv_disp_trig_activity(nullptr);
+      lv_obj_invalidate(lv_scr_act());
+      lv_obj_invalidate(lv_layer_top());
+      lv_obj_invalidate(lv_layer_sys());
+    }
+#endif
     lv_timer_handler();
-    lv_lock.unlock();
 
 #ifndef SIMULATOR
-    if (display_sleep != -1) {
+    if (vt_active && display_sleep != -1) {
       if (lv_disp_get_inactive_time(NULL) > display_sleep) {
         if (!is_sleeping.load()) {
           spdlog::debug("putting display to sleeping");
@@ -255,6 +311,7 @@ void Fre3nderScreen::loop() {
     }
 #endif  // SIMULATOR
 
+    lock.unlock();
     usleep(5000);
   }
 }
