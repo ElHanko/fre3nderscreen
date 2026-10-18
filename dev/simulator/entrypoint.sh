@@ -62,6 +62,12 @@ prepare_config() {
     # disposable writable copy instead of the tracked source configuration.
     cp "$CONFIG_SOURCE" "$RUNTIME_DIR/fre3nderscreen.json"
     export FRE3NDERSCREEN_CONFIG="$RUNTIME_DIR/fre3nderscreen.json"
+
+    # Mock USB mount: synthetic archive bytes, accepted ONLY by the mock.
+    # Never publish a dummy package to a real printer.
+    mkdir -p "$RUNTIME_DIR/usb"
+    printf '%s\n' 'simulator-only fake fre3app' > "$RUNTIME_DIR/usb/sample-app.fre3app"
+    export FRE3NDERSCREEN_USB_ROOT="$RUNTIME_DIR/usb"
 }
 
 build_simulator() {
@@ -119,6 +125,51 @@ start_mock_moonraker() {
     done
 }
 
+start_mock_management() {
+    export FRE3NDERSCREEN_MANAGEMENT_SOCKET="$RUNTIME_DIR/management.sock"
+    python3 "$WORK_DIR/dev/simulator/mock_management.py" \
+        --socket "$FRE3NDERSCREEN_MANAGEMENT_SOCKET" \
+        >"$RUNTIME_DIR/mock-management.log" 2>&1 &
+    MANAGEMENT_PID=$!
+
+    i=0
+    while :; do
+        if [ -S "$FRE3NDERSCREEN_MANAGEMENT_SOCKET" ] && \
+           python3 - "$FRE3NDERSCREEN_MANAGEMENT_SOCKET" <<'PY_CHECK' >/dev/null 2>&1
+import socket
+import sys
+
+with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+    client.settimeout(0.2)
+    client.connect(sys.argv[1])
+    client.sendall(b"GET /fre3nder/api/v1/system/details HTTP/1.0\r\nHost: localhost\r\n\r\n")
+    chunks = []
+    while True:
+        chunk = client.recv(4096)
+        if not chunk:
+            break
+        chunks.append(chunk)
+    result = b"".join(chunks)
+    assert b"HTTP/1.0 200" in result and b'"operation":"system-details"' in result
+PY_CHECK
+        then
+            return 0
+        fi
+        if ! kill -0 "$MANAGEMENT_PID" 2>/dev/null; then
+            echo "Management simulator exited during startup." >&2
+            cat "$RUNTIME_DIR/mock-management.log" >&2 || true
+            return 1
+        fi
+        i=$((i + 1))
+        if [ "$i" -ge 50 ]; then
+            echo "Management simulator did not become ready." >&2
+            cat "$RUNTIME_DIR/mock-management.log" >&2 || true
+            return 1
+        fi
+        sleep 0.1
+    done
+}
+
 run_simulator() {
     DISPLAY_NUMBER=99
     export DISPLAY=":$DISPLAY_NUMBER"
@@ -129,9 +180,10 @@ run_simulator() {
     VNC_PID=
     NOVNC_PID=
     MOCK_PID=
+    MANAGEMENT_PID=
 
     cleanup() {
-        for pid in "$NOVNC_PID" "$VNC_PID" "$APP_PID" "$MOCK_PID" "$XVFB_PID"; do
+        for pid in "$NOVNC_PID" "$VNC_PID" "$APP_PID" "$MOCK_PID" "$MANAGEMENT_PID" "$XVFB_PID"; do
             if [ -n "$pid" ]; then
                 kill "$pid" 2>/dev/null || true
                 wait "$pid" 2>/dev/null || true
@@ -142,6 +194,7 @@ run_simulator() {
 
     wait_for_x "$DISPLAY_NUMBER"
     start_mock_moonraker
+    start_mock_management
 
     cd "$WORK_DIR"
     ./build/bin/fre3nderscreen >"$RUNTIME_DIR/fre3nderscreen-stdout.log" 2>&1 &
@@ -173,7 +226,8 @@ run_simulator() {
             "$APP_PID:Fre3nderScreen:$RUNTIME_DIR/fre3nderscreen-stdout.log" \
             "$VNC_PID:x11vnc:$RUNTIME_DIR/x11vnc.log" \
             "$NOVNC_PID:noVNC:$RUNTIME_DIR/novnc.log" \
-            "$MOCK_PID:Moonraker simulator:$RUNTIME_DIR/mock-moonraker.log"
+            "$MOCK_PID:Moonraker simulator:$RUNTIME_DIR/mock-moonraker.log" \
+            "$MANAGEMENT_PID:Management simulator:$RUNTIME_DIR/mock-management.log"
         do
             pid=${process%%:*}
             rest=${process#*:}
@@ -208,9 +262,10 @@ run_screenshot() {
     XVFB_PID=$!
     APP_PID=
     MOCK_PID=
+    MANAGEMENT_PID=
 
     cleanup() {
-        for pid in "$APP_PID" "$MOCK_PID" "$XVFB_PID"; do
+        for pid in "$APP_PID" "$MOCK_PID" "$MANAGEMENT_PID" "$XVFB_PID"; do
             if [ -n "$pid" ]; then
                 kill "$pid" 2>/dev/null || true
                 wait "$pid" 2>/dev/null || true
@@ -221,6 +276,7 @@ run_screenshot() {
 
     wait_for_x "$DISPLAY_NUMBER"
     start_mock_moonraker
+    start_mock_management
 
     cd "$WORK_DIR"
     ./build/bin/fre3nderscreen >"$RUNTIME_DIR/fre3nderscreen-stdout.log" 2>&1 &

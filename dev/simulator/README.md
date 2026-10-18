@@ -61,6 +61,48 @@ Temperature edits from the UI are accepted and the simulated temperature moves
 toward the selected target, so normal and active-heating states can both be
 checked without touching a real printer.
 
+## Simulated Fre3nder Management API
+
+In both interactive and screenshot modes, the simulator starts
+`dev/simulator/mock_management.py` alongside the existing Moonraker mock.
+The mock listens **only** on the container-local Unix-domain socket
+`/work/runtime/management.sock` (permissions `0600`). The launcher exports
+`FRE3NDERSCREEN_MANAGEMENT_SOCKET` to the simulated Fre3nderScreen process.
+No TCP port is opened, no management web UI is required, and the real Core
+Management daemon is neither accessed nor modified.
+
+Only `GET /fre3nder/api/v1/system/details` is implemented. Its HTTP/1.0 JSON
+response follows the production API structure with deliberately synthetic
+platform, memory, storage, network, services, apps, and USB observations.
+The test-network addresses (`192.0.2.0/24`) and hostname are not real device
+data. Other GET routes return 404; POST routes reject all mutations with 405.
+
+Run the mock's standalone, non-build integration tests from the repository root:
+
+```sh
+python3 -m unittest discover -s tests -p 'test_simulator_management.py' -v
+```
+
+The System page loads a snapshot on entry or Refresh. This fixture tests its
+layout and formatting, **not** production permissions or on-device behavior.
+The failure state remains testable by stopping the mock or using an invalid
+socket path in a separate development run.
+
+## Simulated Apps management
+
+The native Apps page uses the same Unix socket as System. The simulator mock
+now serves `apps/status`, `apps/detail` and a **simulated** version of the
+existing POST Apps contract. Changes affect only in-memory fixture data.
+There is **no package signature verification** in the mock, and the runtime
+contains a dummy `sample-app.fre3app` under `/work/runtime/usb/` exclusively to
+exercise USB selection/upload on the simulated display. Never deploy this file
+or assume simulator acceptance proves that a real package is trusted.
+
+On a real Fre3nder installation the Screen uses the fixed, existing
+`/run/fre3nder/usb` mount and the Core Management API, which verifies signatures
+and performs all package transactions. The Screen only selects files and sends
+explicit operator requests. It never touches package state or system files.
+
 ## Screenshot generator
 
 ```bash

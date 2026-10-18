@@ -35,11 +35,15 @@ void style_transparent_container(lv_obj_t *cont)
 
 Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
   : wifi_panel(lock)
+  , system_panel()
+  , apps_panel()
   , cont(lv_obj_create(lv_scr_act()))
   , header_cont(lv_obj_create(cont))
   , back_btn(lv_btn_create(header_cont))
   , title_label(lv_label_create(header_cont))
   , wifi_btn(lv_btn_create(cont))
+  , system_btn(lv_btn_create(cont))
+  , apps_btn(lv_btn_create(cont))
 {
   lv_obj_move_background(cont);
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
@@ -51,7 +55,9 @@ Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
 
   static lv_coord_t rows[] = {
     42,
-    LV_GRID_FR(1),
+    116,
+    116,
+    116,
     LV_GRID_TEMPLATE_LAST
   };
   static lv_coord_t cols[] = {
@@ -116,6 +122,48 @@ Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
   lv_obj_set_style_text_align(wifi_label, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_font(wifi_label, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(wifi_label, lv_color_hex(COLOR_TEXT), 0);
+
+  lv_obj_set_grid_cell(system_btn, LV_GRID_ALIGN_STRETCH, 0, 1,
+                       LV_GRID_ALIGN_START, 2, 1);
+  lv_obj_set_height(system_btn, 116);
+  style_button(system_btn);
+  lv_obj_set_style_pad_all(system_btn, 12, 0);
+  lv_obj_set_flex_flow(system_btn, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(system_btn, LV_FLEX_ALIGN_CENTER,
+                        LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_add_event_cb(system_btn, &Fre3nderPanel::_handle_callback,
+                      LV_EVENT_CLICKED, this);
+
+  lv_obj_t *system_icon = lv_label_create(system_btn);
+  lv_label_set_text(system_icon, LV_SYMBOL_LIST);
+  lv_obj_set_style_text_font(system_icon, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(system_icon, lv_color_hex(COLOR_ACCENT), 0);
+
+  lv_obj_t *system_label = lv_label_create(system_btn);
+  lv_label_set_text(system_label, "System");
+  lv_obj_set_style_text_font(system_label, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(system_label, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_center(system_label);
+
+  lv_obj_set_grid_cell(apps_btn, LV_GRID_ALIGN_STRETCH, 0, 1,
+                       LV_GRID_ALIGN_START, 3, 1);
+  lv_obj_set_height(apps_btn, 116);
+  style_button(apps_btn);
+  lv_obj_set_style_pad_all(apps_btn, 12, 0);
+  lv_obj_set_flex_flow(apps_btn, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(apps_btn, LV_FLEX_ALIGN_CENTER,
+                        LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_add_event_cb(apps_btn, &Fre3nderPanel::_handle_callback,
+                      LV_EVENT_CLICKED, this);
+  lv_obj_t *apps_icon = lv_label_create(apps_btn);
+  lv_label_set_text(apps_icon, LV_SYMBOL_DIRECTORY);
+  lv_obj_set_style_text_font(apps_icon, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(apps_icon, lv_color_hex(COLOR_ACCENT), 0);
+  lv_obj_t *apps_label = lv_label_create(apps_btn);
+  lv_label_set_text(apps_label, "Apps");
+  lv_obj_set_style_text_font(apps_label, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(apps_label, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_center(apps_label);
 }
 
 Fre3nderPanel::~Fre3nderPanel()
@@ -144,5 +192,9 @@ void Fre3nderPanel::handle_callback(lv_event_t *event)
   } else if (button == wifi_btn) {
     spdlog::trace("Fre3nder WiFi settings pressed");
     wifi_panel.foreground();
+  } else if (button == system_btn) {
+    system_panel.foreground();
+  } else if (button == apps_btn) {
+    apps_panel.foreground();
   }
 }
