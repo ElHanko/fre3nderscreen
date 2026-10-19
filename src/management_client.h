@@ -24,6 +24,12 @@ class ManagementClient {
       const std::string &socket_path = "/run/fre3nder-management/api.sock");
   static Response upload_app(const std::string &absolute_path,
       const std::string &socket_path = "/run/fre3nder-management/api.sock");
+  static Response ota_status(const std::string &socket_path =
+      "/run/fre3nder-management/api.sock");
+  static Response ota_action(const std::string &action, const std::string &json_body,
+      const std::string &socket_path = "/run/fre3nder-management/api.sock");
+  static Response upload_ota(const std::string &absolute_path,
+      const std::string &socket_path = "/run/fre3nder-management/api.sock");
 
  private:
   static Response request(const std::string &method, const std::string &route,

@@ -15,7 +15,9 @@
 namespace {
 constexpr size_t MAX_RESPONSE = 512 * 1024;
 constexpr off_t MAX_APP_UPLOAD = 256LL * 1024 * 1024;
+constexpr off_t MAX_OTA_UPLOAD = 96LL * 1024 * 1024;
 constexpr const char *PREFIX = "/fre3nder/api/v1/apps/";
+constexpr const char *OTA_PREFIX = "/fre3nder/api/v1/ota/";
 
 struct Fd {
   int value = -1;
@@ -50,10 +52,10 @@ bool valid_app_name(const std::string &name)
   return true;
 }
 
-bool valid_filename(const std::string &name)
+bool valid_filename(const std::string &name, const std::string &suffix)
 {
-  if (name.size() < 9 || name.size() > 128 ||
-      name.compare(name.size() - 8, 8, ".fre3app") != 0) return false;
+  if (name.size() <= suffix.size() || name.size() > 128 ||
+      name.compare(name.size() - suffix.size(), suffix.size(), suffix) != 0) return false;
   for (char c : name)
     if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
           (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.')) return false;
@@ -97,6 +99,29 @@ ManagementClient::Response ManagementClient::upload_app(const std::string &absol
   return request("POST", std::string(PREFIX) + "upload", {}, absolute_path, socket_path);
 }
 
+ManagementClient::Response ManagementClient::ota_status(const std::string &socket_path)
+{
+  return request("GET", std::string(OTA_PREFIX) + "status", {}, {}, socket_path);
+}
+
+ManagementClient::Response ManagementClient::ota_action(const std::string &action,
+    const std::string &json_body, const std::string &socket_path)
+{
+  if (action != "verify" && action != "preflight" && action != "backup-plan" &&
+      action != "backup" && action != "confirm" && action != "write" &&
+      action != "readback" && action != "prepare-activation" && action != "reboot")
+    return failure("Unsupported OTA operation");
+  if (json_body.empty() || json_body.size() > 256)
+    return failure("Invalid OTA operation body");
+  return request("POST", std::string(OTA_PREFIX) + action, json_body, {}, socket_path);
+}
+
+ManagementClient::Response ManagementClient::upload_ota(const std::string &absolute_path,
+    const std::string &socket_path)
+{
+  return request("POST", std::string(OTA_PREFIX) + "upload", {}, absolute_path, socket_path);
+}
+
 ManagementClient::Response ManagementClient::request(const std::string &method,
     const std::string &route, const std::string &json_body,
     const std::string &upload_path, const std::string &path)
@@ -126,14 +151,19 @@ ManagementClient::Response ManagementClient::request(const std::string &method,
         upload_path.compare(0, usb_root.size() + 1, usb_root + "/") != 0)
       return failure("Application must come from the USB mount");
     filename = upload_path.substr(usb_root.size() + 1);
-    if (!valid_filename(filename)) return failure("Invalid USB package filename");
+    const bool ota_upload = route == std::string(OTA_PREFIX) + "upload";
+    const bool app_upload = route == std::string(PREFIX) + "upload";
+    if ((!ota_upload && !app_upload) ||
+        !valid_filename(filename, ota_upload ? ".ota" : ".fre3app"))
+      return failure("Invalid USB package filename");
     Fd dir(open(usb_root.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW));
     if (dir.value < 0) return failure("USB mount unavailable");
     upload.value = openat(dir.value, filename.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
     if (upload.value < 0) return failure("USB package unavailable");
     struct stat metadata {};
     if (fstat(upload.value, &metadata) != 0 || !S_ISREG(metadata.st_mode) ||
-        metadata.st_size <= 0 || metadata.st_size > MAX_APP_UPLOAD)
+        metadata.st_size <= 0 ||
+        metadata.st_size > (ota_upload ? MAX_OTA_UPLOAD : MAX_APP_UPLOAD))
       return failure("Invalid USB package or size");
     upload_size = metadata.st_size;
   }

@@ -4,6 +4,7 @@
 #include "wifi_panel.h"
 #include "system_panel.h"
 #include "apps_panel.h"
+#include "ota_panel.h"
 #include "lvgl/lvgl.h"
 
 #include <mutex>
@@ -25,6 +26,7 @@ class Fre3nderPanel {
   WifiPanel wifi_panel;
   SystemPanel system_panel;
   AppsPanel apps_panel;
+  OtaPanel ota_panel;
 
   lv_obj_t *cont;
   lv_obj_t *header_cont;
@@ -33,6 +35,7 @@ class Fre3nderPanel {
   lv_obj_t *wifi_btn;
   lv_obj_t *system_btn;
   lv_obj_t *apps_btn;
+  lv_obj_t *ota_btn;
 };
 
 #endif // __FRE3NDER_PANEL_H__

@@ -220,6 +220,119 @@ class SimulatedApps:
 
 APPS = SimulatedApps()
 
+# Synthetic OTA state machine: UI/transport fixture ONLY; never validates
+# signatures or touches a real kernel, RootFS, selector, or backup medium.
+OTA_PREFIX = "/fre3nder/api/v1/ota/"
+
+
+class SimulatedOta:
+    def __init__(self):
+        self.packages = {}
+        self.execution = None
+        self.transaction = None
+        self.activation = None
+        self.known_good = {"state": "known-good", "version": "2026.4-demo", "slot": "A"}
+
+    def overview(self):
+        mib = 1024 * 1024
+        return {
+            "core": {"api_version": 1, "ok": True, "operation": "status",
+                     "busy": False, "transaction": self.transaction,
+                     "activation": self.activation, "known_good": self.known_good},
+            "execution": self.execution,
+            "packages": [{"id": k, "size": v["size"]} for k, v in self.packages.items()],
+            "storage": {"available_bytes": 600 * mib, "max_package_bytes": 96 * mib,
+                        "reserve_bytes": 32 * mib, "proxy_copy_reserved": True,
+                        "proxy_available_bytes": 1024 * mib},
+        }
+
+    def context(self, package_id):
+        return {"package": {"path": f"/ota/packages/{package_id}.ota",
+                            "version": "2026.5-demo", "platform": "ender3-v3-ke",
+                            "status": "valid", "artifact_mode": "development"},
+                "runtime": {"installed_version": "2026.4-demo", "active_slot": "A",
+                            "active_root": "/dev/mmcblk0p7"},
+                "target": {"slot": "B", "kernel": "/dev/mmcblk0p6",
+                           "rootfs": "/dev/mmcblk0p8"}}
+
+    def offer(self):
+        return {"home": {"offered": True, "required": False, "targets": ["usb"]},
+                "sys": {"offered": True, "required": False, "targets": ["usb", "home"]}}
+
+    def run(self, operation, payload):
+        if not isinstance(payload, dict):
+            return None
+        pid = payload.get("package_id")
+        if operation == "reboot":
+            if (self.transaction is None or self.transaction["state"] != "activation-prepared"
+                    or payload != {"transaction_id": self.transaction["transaction_id"]}):
+                return None
+            result = {"state": "reboot-requested", "transaction_id": self.transaction["transaction_id"]}
+        elif not isinstance(pid, str) or pid not in self.packages:
+            return None
+        elif operation in ("verify", "preflight"):
+            if payload != {"package_id": pid} or self.transaction or self.activation:
+                return None
+            result = self.context(pid) if operation == "preflight" else {"package": self.context(pid)["package"]}
+            if operation == "preflight":
+                result["backup_offer"] = self.offer()
+        elif operation in ("backup-plan", "backup"):
+            if set(payload) != {"package_id", "home", "sys"} or self.transaction or self.activation:
+                return None
+            home, sys = payload["home"], payload["sys"]
+            if home not in ("usb", "none") or sys not in ("usb", "home", "none"):
+                return None
+            selection = {role: {"selected": value != "none",
+                                "target": value if value != "none" else None}
+                         for role, value in (("home", home), ("sys", sys))}
+            result = {**self.context(pid), "backup_offer": self.offer(),
+                      "backup_selection": selection}
+            if operation == "backup":
+                result["backup_result"] = {
+                    role: {"selected": value != "none", "verified": value != "none",
+                           "archive": f"/mock/{role}.tar", "size": 1234, "sha256": "a" * 64}
+                    for role, value in (("home", home), ("sys", sys))}
+                tx = secrets.token_hex(16)
+                self.transaction = {"api_version": 1, "state": "awaiting-confirmation",
+                                    "transaction_id": tx, **self.context(pid),
+                                    "backup_selection": selection,
+                                    "backup_result": result["backup_result"]}
+                result["confirmation"] = {"required": True, "state": "awaiting-confirmation",
+                                          "transaction_id": tx}
+        else:
+            if not self.transaction or payload != {
+                "package_id": pid, "transaction_id": self.transaction["transaction_id"]}:
+                return None
+            phases = {"confirm": ("awaiting-confirmation", "confirmed"),
+                      "write": ("confirmed", "written-awaiting-readback"),
+                      "readback": ("written-awaiting-readback", "readback-verified"),
+                      "prepare-activation": ("readback-verified", "activation-prepared")}
+            if operation not in phases or self.transaction["state"] != phases[operation][0]:
+                return None
+            self.transaction["state"] = phases[operation][1]
+            if operation == "prepare-activation":
+                self.activation = {"state": "activation-prepared",
+                                   "transaction_id": self.transaction["transaction_id"]}
+            result = {"transaction": {"state": self.transaction["state"],
+                                       "transaction_id": self.transaction["transaction_id"]}}
+        result = {"api_version": 1, "ok": True, "operation": operation, **result}
+        self.execution = {"id": secrets.token_hex(16), "state": "succeeded",
+                          "operation": operation, **payload, "result": result}
+        return self.execution
+
+    def upload(self, filename, size):
+        if not re.fullmatch(r"[A-Za-z0-9._-]{1,124}\.ota", filename) or size <= 0 or size > 96 * 1024 * 1024:
+            return None
+        if self.transaction or self.activation:
+            return None
+        pid = secrets.token_hex(16)
+        self.packages[pid] = {"size": size}
+        return self.run("verify", {"package_id": pid})
+
+
+OTA = SimulatedOta()
+
+
 
 class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.0"
@@ -244,6 +357,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == ROUTE:
             self.send_json(200, system_snapshot())
+        elif self.path == OTA_PREFIX + "status":
+            self.send_json(200, {"api_version": 1, "ok": True,
+                                 "operation": "ota-status", "ota": OTA.overview()})
         elif self.path == APPS_PREFIX + "status":
             self.send_json(200, {"api_version": 1, "ok": True,
                                  "operation": "apps-status", "apps": APPS.overview()})
@@ -261,6 +377,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                                  "error": {"code": "not-found"}})
 
     def do_POST(self):
+        if self.path.startswith(OTA_PREFIX):
+            self.handle_ota_post()
+            return
         if not self.path.startswith(APPS_PREFIX):
             self.send_json(405, {"api_version": 1, "ok": False,
                                  "error": {"code": "simulator-only"}})
@@ -325,6 +444,58 @@ class Handler(http.server.BaseHTTPRequestHandler):
         else:
             self.send_json(202, {"api_version": 1, "ok": True,
                                  "operation": "apps-accepted", "execution": job})
+
+
+    def handle_ota_post(self):
+        operation = self.path[len(OTA_PREFIX):]
+        allowed = {"upload", "verify", "preflight", "backup-plan", "backup", "confirm",
+                   "write", "readback", "prepare-activation", "reboot"}
+        if operation not in allowed:
+            self.send_json(404, {"api_version": 1, "ok": False,
+                                 "error": {"code": "not-found", "message": "Unknown OTA route"}})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "-1"))
+        except ValueError:
+            length = -1
+        if length < 0 or length > 96 * 1024 * 1024:
+            self.send_json(413, {"api_version": 1, "ok": False,
+                                 "error": {"code": "request-too-large", "message": "Invalid length"}})
+            return
+        if operation == "upload":
+            if self.headers.get("Content-Type") != "application/octet-stream":
+                self.send_json(415, {"api_version": 1, "ok": False,
+                                     "error": {"code": "invalid-type"}})
+                return
+            name = self.headers.get("X-Fre3nder-Filename", "")
+            if not re.fullmatch(r"[A-Za-z0-9._-]{1,124}\.ota", name) or length == 0:
+                self.send_json(400, {"api_version": 1, "ok": False,
+                                     "error": {"code": "invalid-filename"}})
+                return
+            remaining = length
+            while remaining:
+                block = self.rfile.read(min(65536, remaining))
+                if not block:
+                    return
+                remaining -= len(block)
+            job = OTA.upload(name, length)
+        else:
+            if self.headers.get("Content-Type") != "application/json" or length > 256:
+                self.send_json(415, {"api_version": 1, "ok": False,
+                                     "error": {"code": "invalid-body"}})
+                return
+            try:
+                payload = json.loads(self.rfile.read(length))
+            except (ValueError, UnicodeDecodeError):
+                payload = None
+            job = OTA.run(operation, payload)
+        if job is None:
+            self.send_json(409, {"api_version": 1, "ok": False,
+                                 "error": {"code": "invalid-transition",
+                                           "message": "Simulator rejects invalid OTA transition"}})
+            return
+        self.send_json(202, {"api_version": 1, "ok": True,
+                             "operation": "ota-accepted", "execution": job})
 
 
 class Server(socketserver.UnixStreamServer):

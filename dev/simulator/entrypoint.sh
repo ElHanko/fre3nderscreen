@@ -67,6 +67,7 @@ prepare_config() {
     # Never publish a dummy package to a real printer.
     mkdir -p "$RUNTIME_DIR/usb"
     printf '%s\n' 'simulator-only fake fre3app' > "$RUNTIME_DIR/usb/sample-app.fre3app"
+    printf '%s\n' 'simulator-only fake ota' > "$RUNTIME_DIR/usb/sample-update.ota"
     export FRE3NDERSCREEN_USB_ROOT="$RUNTIME_DIR/usb"
 }
 

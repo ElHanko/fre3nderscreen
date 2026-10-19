@@ -71,11 +71,10 @@ The mock listens **only** on the container-local Unix-domain socket
 No TCP port is opened, no management web UI is required, and the real Core
 Management daemon is neither accessed nor modified.
 
-Only `GET /fre3nder/api/v1/system/details` is implemented. Its HTTP/1.0 JSON
-response follows the production API structure with deliberately synthetic
-platform, memory, storage, network, services, apps, and USB observations.
-The test-network addresses (`192.0.2.0/24`) and hostname are not real device
-data. Other GET routes return 404; POST routes reject all mutations with 405.
+The mock implements the System, Apps and OTA API routes needed by the
+native pages, with HTTP/1.0 JSON responses and synthetic state only. The
+test-network addresses (`192.0.2.0/24`) and hostname are not real device data.
+Undocumented routes are rejected. No production system or signing keys are used.
 
 Run the mock's standalone, non-build integration tests from the repository root:
 
@@ -102,6 +101,19 @@ On a real Fre3nder installation the Screen uses the fixed, existing
 `/run/fre3nder/usb` mount and the Core Management API, which verifies signatures
 and performs all package transactions. The Screen only selects files and sends
 explicit operator requests. It never touches package state or system files.
+
+## Simulated OTA updates
+
+The native **Updates** page uses the local Management Unix socket. The simulator
+mock follows the existing OTA API steps: upload/verify, preflight, backup-plan,
+backup, confirmation, write, readback, activation preparation and reboot request.
+
+All packages, backups, transactions, block targets, signatures and restart
+outcomes are **synthetic**. The sample `.ota` under `/work/runtime/usb/` is an
+invalid archive for production use and must never be installed on hardware.
+The mock never writes a kernel, RootFS, backup archive or boot selector, never
+reboots the host/container and never marks an update boot as validated.
+The production UI sends only explicit commands to Fre3nder's existing Core API.
 
 ## Screenshot generator
 

@@ -110,7 +110,7 @@ class SimulatorManagementTests(unittest.TestCase):
         self.assertNotIn("demo-app", [a["name"] for a in apps["installed"]])
         self.assertEqual(self.request("POST", "/fre3nder/api/v1/apps/remove",
                                       '{"name":"fre3nderscreen"}')[0], 409)
-        self.assertEqual(self.request("POST", "/fre3nder/api/v1/ota/write")[0], 405)
+        self.assertEqual(self.request("POST", "/fre3nder/api/v1/ota/write")[0], 409)
         self.assertEqual(self.request("POST", "/fre3nder/api/v1/maintenance/enable")[0], 405)
 
     def test_simulated_usb_upload_then_install(self):
