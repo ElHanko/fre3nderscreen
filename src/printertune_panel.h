@@ -4,10 +4,6 @@
 #include "finetune_panel.h"
 #include "limits_panel.h"
 #include "bedmesh_panel.h"
-#include "inputshaper_panel.h"
-#include "belts_calibration_panel.h"
-#include "tmc_tune_panel.h"
-#include "tmc_status_panel.h"
 #include "power_panel.h"
 #include "lvgl/lvgl.h"
 
@@ -43,19 +39,11 @@ class PrinterTunePanel {
   BedMeshPanel bedmesh_panel;
   FineTunePanel &finetune_panel;
   LimitsPanel limits_panel;
-  InputShaperPanel inputshaper_panel;
-  BeltsCalibrationPanel belts_calibration_panel;
-  TmcTunePanel tmc_tune_panel;
-  TmcStatusPanel tmc_status_panel;
   PowerPanel power_panel;
 
   lv_obj_t *bedmesh_btn;
   lv_obj_t *finetune_btn;
-  lv_obj_t *inputshaper_btn;
-  lv_obj_t *belts_calibration_btn;
   lv_obj_t *limits_btn;
-  lv_obj_t *tmc_tune_btn;
-  lv_obj_t *tmc_status_btn;
   lv_obj_t *power_devices_btn;
 };
 

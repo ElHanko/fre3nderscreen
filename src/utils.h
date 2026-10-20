@@ -11,16 +11,11 @@
 using json = nlohmann::json;
 
 namespace KUtils {
-  bool is_homed();
   bool is_running_local();
   std::string get_root_path(const std::string root_name);
 
   // path, width
   std::pair<std::string, size_t> get_thumbnail(const std::string &gcode_file, json &j, double scale);
-
-  std::string download_file(const std::string &root,
-			    const std::string &fname,
-			    const std::string &dest);
 
   template <typename Out>
   void split(const std::string &s, char delim, Out result);

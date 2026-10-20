@@ -20,20 +20,7 @@ void Config::init(std::string config_path, const std::string thumbdir) {
   path = config_path;
   struct stat buffer;
 
-  json fans_conf = {
-    {
-      {"id", "output_pin fan0"},
-      {"display_name", "Toolhead Fan"}
-    },
-    {
-      {"id", "output_pin fan1"},
-      {"display_name", "Back Fan"}
-    },
-    {
-      {"id", "output_pin fan2"},
-      {"display_name", "Side Fan"}
-    }
-  };
+  json fans_conf = json::array();
 
   json sensors_conf = {
     {
@@ -47,12 +34,6 @@ void Config::init(std::string config_path, const std::string thumbdir) {
       {"display_name", "Bed"},
       {"controllable", true},
       {"color", "purple"}
-    },
-    {
-      {"id", "temperature_sensor chamber_temp"},
-      {"display_name", "Chamber"},
-      {"controllable", false},
-      {"color", "blue"}
     }
   };
 
@@ -62,8 +43,8 @@ void Config::init(std::string config_path, const std::string thumbdir) {
     "SET_HEATER_TEMPERATURE HEATER=heater_bed TARGET=0"
   }};
   json default_macros_conf = {
-    {"load_filament", "_GUPPY_LOAD_MATERIAL"},
-    {"unload_filament", "_GUPPY_QUIT_MATERIAL"}
+    {"load_filament", "LOAD_FILAMENT"},
+    {"unload_filament", "UNLOAD_FILAMENT"}
   };
 
   if (stat(config_path.c_str(), &buffer) == 0) {
@@ -126,10 +107,6 @@ void Config::init(std::string config_path, const std::string thumbdir) {
   std::ofstream o(config_path);
   o << std::setw(2) << data << std::endl;
 }
-std::string Config::get_thumbnail_path() {
-  return get<std::string>("/thumbnail_path");
-}
-
 std::string Config::get_path() {
     return path;
 }

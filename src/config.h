@@ -33,7 +33,6 @@ class Config {
   json &get_json(const std::string &json_path);
 
   void save();
-  std::string get_thumbnail_path();
   std::string get_path();
 
   static Config *get_instance();

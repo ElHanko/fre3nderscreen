@@ -98,8 +98,6 @@ void InitPanel::connected(KWebSocketClient &ws) {
 	    }
 	  }
 
-	  sub_objs["tmcstatus"] = nullptr;
-
 	  json subs = {{ "objects", sub_objs }};
 	  spdlog::debug("subcribing to {}", subs.dump());
 	  ws.send_jsonrpc("printer.objects.subscribe", subs,

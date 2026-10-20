@@ -1,5 +1,6 @@
 {
   "display_sleep_sec": 3600,
+  "leds": [{"id": "output_pin LED", "display_name": "LED"}],
   "log_level": "debug",
   "log_path": "/work/runtime/logs/fre3nderscreen.log",
   "moonraker_api_key": false,

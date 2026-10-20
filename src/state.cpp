@@ -330,16 +330,6 @@ json State::get_display_leds() {
 
   // default to top standard leds
   if (display_leds.empty()) {
-    for (auto &e : output_pins) {
-      // hack to support k1 defined output_pin led
-      if (e == "output_pin LED") {
-	display_leds["output_pin LED"] = {
-	  {"id", "output_pin LED"},
-	  {"display_name", "LED"}
-	};
-      }
-    }
-    
     for (auto &e: leds) {
       size_t pos = e.find_last_of(' ');
       std::string display_name = KUtils::to_title(pos != std::string::npos

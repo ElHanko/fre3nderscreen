@@ -10,6 +10,7 @@
 
 #include <cstdlib>
 #include <fstream>
+#include <experimental/filesystem>
 #ifndef SIMULATOR
   #include <fcntl.h>
   #include <unistd.h>
@@ -19,6 +20,7 @@
 #include "state.h"
 #include "theme.h"
 
+namespace fs = std::experimental::filesystem;
 Fre3nderScreen *Fre3nderScreen::instance = NULL;
 lv_style_t Fre3nderScreen::style_container;
 lv_style_t Fre3nderScreen::style_imgbtn_pressed;

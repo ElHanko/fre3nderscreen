@@ -1,11 +1,6 @@
 #include "printertune_panel.h"
 
-#include "state.h"
 #include "spdlog/spdlog.h"
-
-#include <experimental/filesystem>
-
-namespace fs = std::experimental::filesystem;
 
 namespace {
 
@@ -56,18 +51,10 @@ PrinterTunePanel::PrinterTunePanel(KWebSocketClient &client,
   , bedmesh_panel(client, lock)
   , finetune_panel(finetune)
   , limits_panel(client, lock)
-  , inputshaper_panel(client, lock)
-  , belts_calibration_panel(client, lock)
-  , tmc_tune_panel(client)
-  , tmc_status_panel(client, lock)
   , power_panel(client, lock)
   , bedmesh_btn(lv_btn_create(cards_cont))
   , finetune_btn(lv_btn_create(cards_cont))
-  , inputshaper_btn(lv_btn_create(cards_cont))
-  , belts_calibration_btn(lv_btn_create(cards_cont))
   , limits_btn(lv_btn_create(cards_cont))
-  , tmc_tune_btn(lv_btn_create(cards_cont))
-  , tmc_status_btn(lv_btn_create(cards_cont))
   , power_devices_btn(lv_btn_create(cards_cont))
 {
   lv_obj_move_background(cont);
@@ -126,8 +113,6 @@ PrinterTunePanel::PrinterTunePanel(KWebSocketClient &client,
   static lv_coord_t rows[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
-    LV_GRID_FR(1),
-    LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
   static lv_coord_t cols[] = {
@@ -149,11 +134,7 @@ PrinterTunePanel::PrinterTunePanel(KWebSocketClient &client,
     {finetune_btn, LV_SYMBOL_EDIT, "Fine Tune", 0, 0},
     {limits_btn, LV_SYMBOL_SETTINGS, "Limits", 1, 0},
     {bedmesh_btn, LV_SYMBOL_IMAGE, "Bed Mesh", 0, 1},
-    {inputshaper_btn, LV_SYMBOL_LOOP, "Input Shaper", 1, 1},
-    {belts_calibration_btn, LV_SYMBOL_REFRESH, "Belts Calibration", 0, 2},
-    {tmc_tune_btn, LV_SYMBOL_CHARGE, "TMC Tune", 1, 2},
-    {tmc_status_btn, LV_SYMBOL_LIST, "TMC Status", 0, 3},
-    {power_devices_btn, LV_SYMBOL_POWER, "Power", 1, 3},
+    {power_devices_btn, LV_SYMBOL_POWER, "Power", 1, 1},
   };
 
   for (const auto &entry : buttons) {
@@ -189,8 +170,6 @@ PrinterTunePanel::PrinterTunePanel(KWebSocketClient &client,
     lv_obj_set_style_text_font(label, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(label, lv_color_hex(COLOR_TEXT), 0);
   }
-
-  lv_obj_add_state(tmc_tune_btn, LV_STATE_DISABLED);
 }
 
 PrinterTunePanel::~PrinterTunePanel()
@@ -224,28 +203,6 @@ void PrinterTunePanel::foreground()
 void PrinterTunePanel::init(json &j)
 {
   limits_panel.init(j);
-  tmc_status_panel.init(j);
-
-  // Existing host-path capability check; platform/API cleanup is separate.
-  State *state = State::get_instance();
-  auto klipper_path =
-      state->get_data("/printer_info/klipper_path"_json_pointer);
-
-  if (klipper_path.is_null()) {
-    lv_obj_add_state(tmc_tune_btn, LV_STATE_DISABLED);
-    return;
-  }
-
-  auto motor_db =
-      fs::path(klipper_path.template get<std::string>()) /
-      "klippy/extras/motor_database.cfg";
-
-  if (fs::exists(motor_db)) {
-    lv_obj_clear_state(tmc_tune_btn, LV_STATE_DISABLED);
-    tmc_tune_panel.init(j, motor_db);
-  } else {
-    lv_obj_add_state(tmc_tune_btn, LV_STATE_DISABLED);
-  }
 }
 
 void PrinterTunePanel::handle_callback(lv_event_t *event)
@@ -267,18 +224,6 @@ void PrinterTunePanel::handle_callback(lv_event_t *event)
   } else if (button == bedmesh_btn) {
     spdlog::trace("tune bedmesh pressed");
     bedmesh_panel.foreground();
-  } else if (button == inputshaper_btn) {
-    spdlog::trace("tune inputshaper pressed");
-    inputshaper_panel.foreground();
-  } else if (button == belts_calibration_btn) {
-    spdlog::trace("tune belts pressed");
-    belts_calibration_panel.foreground();
-  } else if (button == tmc_tune_btn) {
-    spdlog::trace("tmc auto tune pressed");
-    tmc_tune_panel.foreground();
-  } else if (button == tmc_status_btn) {
-    spdlog::trace("tmc metrics pressed");
-    tmc_status_panel.foreground();
   } else if (button == power_devices_btn) {
     spdlog::trace("power devices pressed");
     power_panel.foreground();

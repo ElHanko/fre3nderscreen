@@ -1,9 +1,14 @@
 # Docker UI development
 
-This directory provides two Docker-based x86_64 development modes for the
-existing Fre3nderScreen SDL simulator. The application code and LVGL UI are the
+This directory provides interactive and screenshot modes for the Docker-based
+x86_64 Fre3nderScreen SDL simulator. The application code and LVGL UI are the
 same code used by Fre3nderScreen; only the display/input backend is the existing
 SDL simulator.
+
+**Build authorization:** both launchers build a Docker image and compile the
+application, including normal incremental runs. Automated agents must obtain
+explicit operator approval before running either launcher, forcing a rebuild,
+or rebuilding after a fix. See [AGENTS.md](../../AGENTS.md).
 
 The repository is mounted read-only at `/src`. A separate working copy and all
 x86_64 build products live below the already ignored `build/docker-sim/`
@@ -57,6 +62,11 @@ development data. By default it reports:
 - printer state: ready / standby
 - no files, macros, power devices, or external components
 
+Fans and an LED are synthetic fixtures. The LED's `output_pin LED` is explicitly
+listed in `fre3nderscreen.json`; it does not depend on implicit K1 pin discovery.
+Load/Unload remain disabled because the default mock advertises no filament
+macros. Extrude/Retract are separate standard G-code controls.
+
 Temperature edits from the UI are accepted and the simulated temperature moves
 toward the selected target, so normal and active-heating states can both be
 checked without touching a real printer.
@@ -76,10 +86,11 @@ native pages, with HTTP/1.0 JSON responses and synthetic state only. The
 test-network addresses (`192.0.2.0/24`) and hostname are not real device data.
 Undocumented routes are rejected. No production system or signing keys are used.
 
-Run the mock's standalone, non-build integration tests from the repository root:
+Run the mock's standalone, non-build integration tests from the repository root
+(no Docker build or printer access):
 
 ```sh
-python3 -m unittest discover -s tests -p 'test_simulator_management.py' -v
+python3 -m unittest discover -s tests -p 'test_simulator_*.py' -v
 ```
 
 The System page loads a snapshot on entry or Refresh. This fixture tests its
@@ -114,6 +125,12 @@ invalid archive for production use and must never be installed on hardware.
 The mock never writes a kernel, RootFS, backup archive or boot selector, never
 reboots the host/container and never marks an update boot as validated.
 The production UI sends only explicit commands to Fre3nder's existing Core API.
+
+The simulator is not a permissions, signature, flash or boot qualification.
+Separately, the operator reports hardware tests of System, Apps and the full
+OTA flow at Screen `65b37b9` with Fre3nder 2026.5; see the precise
+[qualification scope](../../README.md#hardware-qualification). Those results do
+not automatically qualify subsequent cleanup builds.
 
 ## Screenshot generator
 
@@ -154,10 +171,20 @@ a custom config to reach a Moonraker service published on the Docker host.
 The selected config is copied to writable runtime storage before startup,
 because Fre3nderScreen writes defaults back to its config during initialization.
 
-## Rebuild
+## Regression checks and rebuild
+
+After an approved cleanup build, check More → Tune (Fine Tune, Limits, Bed Mesh,
+Power and back navigation), Control → Extrude (Load/Unload disabled without
+advertised macros, manual extrusion controls present), configured LED controls,
+Files/console and native System/Apps/Updates mock flows. To check enabled
+Load/Unload, use a simulator-only fixture advertising the configured commands;
+do not change the production backend or connect a printer for this test.
+
+Screenshots are local artifacts under `build/ui-screenshots/`. The old upstream
+landscape screenshots were removed because they do not describe the portrait UI.
 
 Normal runs use incremental compilation in `build/docker-sim/`. To force a full
-simulator rebuild:
+simulator rebuild after obtaining approval:
 
 ```bash
 SIMULATOR_FORCE_REBUILD=1 ./dev/simulator/simulator.sh

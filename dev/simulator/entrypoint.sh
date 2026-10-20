@@ -77,10 +77,10 @@ build_simulator() {
 
     if [ "${SIMULATOR_FORCE_REBUILD:-0}" = "1" ] || [ ! -x build/bin/fre3nderscreen ] || [ ! -f /work/.simulator-built ]; then
         rm -rf build
-        make -j"$(nproc)" GUPPY_SMALL_SCREEN=1 GUPPY_ROTATE=1 build
+        make -j"$(nproc)" build
         touch /work/.simulator-built
     else
-        make -j"$(nproc)" GUPPY_SMALL_SCREEN=1 GUPPY_ROTATE=1
+        make -j"$(nproc)"
     fi
 }
 

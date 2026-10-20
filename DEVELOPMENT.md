@@ -1,95 +1,109 @@
 # Fre3nderScreen development
 
-Fre3nderScreen is the dedicated local touchscreen UI for Fre3nder.
+The production target is Fre3nder on the Ender-3 V3 KE / Ingenic X2000.
+The logical UI is fixed at 272×480 portrait. Main navigation is Home, Control,
+Files, Settings, More; subpages use fullscreen layouts.
 
-The production target is Fre3nder on the Ender-3 V3 KE. The x86/SDL build is
-kept as a development simulator so UI work can be tested without repeatedly
-deploying to the printer.
+Read [AGENTS.md](AGENTS.md) before changing code. Keep changes small and preserve
+upstream licensing. Builds, commits, pushes, tags, releases and hardware actions
+need their respective explicit authorization. A request to implement or validate
+is not build authorization.
 
-## Dependencies
+## Architecture
 
-The current source tree uses:
+`main.cpp` initializes the runtime, display/input backend and application.
+`Fre3nderScreen` owns the main UI and Moonraker connection; `InitPanel` discovers
+printer objects and initializes the pages. `State` consumes Moonraker status.
+`MainPanel` owns the Home, Control, Files, Settings and More navigation.
 
-- LVGL
-- lv_drivers
-- libhv
-- spdlog
+Settings separates `Fre3nderPanel` (WiFi placeholder, System, Apps, Updates)
+from `Fre3nderScreenPanel` (UI-local preferences and self restart).
+`ManagementClient` sends HTTP/JSON requests over the existing Core Unix socket;
+System, Apps and OTA pages display results without implementing platform policy.
 
-These dependencies are not automatically permanent. During the Fre3nderScreen
-cleanup, each dependency should remain only while Fre3nderScreen still uses it.
+The More → Tune page contains Fine Tune, Limits, Bed Mesh and Power. Unsupported
+Guppy calibration/TMC dialogs have been removed; see [the audit](RELEASE-2026.2.md).
+Configured Load/Unload commands are enabled from `printer.gcode.help` results.
+No Guppy filament parameters are injected. Keep the existing `default_macros`
+configuration keys; they are also used by the package recipe.
+
+LVGL, lv_drivers, libhv and spdlog are active submodules. The Makefile compiles
+all `src/*.cpp`, `assets/*.c` and `assets/material_46/*.c`, plus touch calibration
+for target builds. Deleting an unused `.cpp` removes its build inclusion. Assets
+are referenced as LVGL symbols; themes are selected as `<theme>.json` at runtime.
+The six themes are also part of the downstream artifact's fixed file set.
+Do not delete resources on the basis of filenames or a single failed search.
 
 ## Build model
 
-### Fre3nder target
+Fre3nder owns the Buildroot toolchain and target cross-build.
+`fre3nder/configs/x2000/sources.json` is the production source pin;
+`fre3nder/build/x2000/fre3nderscreen-component.sh` builds the neutral artifact.
+`fre3nder-apps` imports that artifact and builds the signed `.fre3app`.
+Production packaging, lifecycle scripts and deployment are outside this repo.
 
-The Fre3nder repository owns the target toolchain and cross-builds a neutral
-X2000 app artifact. `fre3nder-apps` imports that artifact and builds and signs
-the `.fre3app`. Fre3nder embeds the finished package as a factory seed; its
-package core installs and selects the app on a fresh persistent system.
+The application Makefile accepts:
 
-This repository intentionally does not ship K1, Debian/Raspberry Pi, Android,
-standalone installer, or release-packaging paths. Package construction belongs
-to `fre3nder-apps`; platform integration and deployment belong to Fre3nder.
+- `CROSS_COMPILE`: target compiler prefix; unset selects the SDL simulator.
+- `FRE3NDERSCREEN_VERSION`: version displayed in the UI; otherwise `dev-snapshot`.
 
-The application build accepts:
+The target uses `LV_DISP_ROT_90` and touch calibration. The SDL simulator runs
+at 272×480 using development-only Moonraker and Management mocks. The dependency
+patches in `patches/` remain required by the production cross-builder.
 
-- `CROSS_COMPILE` - target toolchain prefix
-- `FRE3NDERSCREEN_VERSION` - version string exposed in the UI
-
-The production UI geometry is fixed at 272x480 portrait. The X2000 framebuffer
-is rotated with `LV_DISP_ROT_90`, the small-screen Material asset set is the
-only production asset set, and touch calibration is enabled by default.
-
-### Host simulator
-
-With `CROSS_COMPILE` unset, the Makefile builds the SDL simulator.
-
-Typical development prerequisites on Debian/Ubuntu:
+The normal visual validation command, **only after explicit build approval**:
 
 ```sh
-sudo apt-get install -y build-essential cmake libsdl2-dev
+./dev/simulator/simulator.sh
 ```
 
-Then:
-
-```sh
-make build
-```
-
-The resulting executable is:
-
-```text
-build/bin/fre3nderscreen
-```
-
-No target build is performed by the migration script.
+It builds a Docker image and compiles the simulator. See the
+[simulator guide](dev/simulator/README.md) for prerequisites, screenshots and
+fixtures. Do not change production behavior just to simplify simulator tests.
 
 ## Runtime interface
 
-The current runtime path overrides are:
+Fre3nder's display manager and the `fre3nder-apps` service supply production
+paths and permissions. The Screen accepts:
 
-- `FRE3NDERSCREEN_CONFIG`
-- `FRE3NDERSCREEN_THEME_DIR`
-- `FRE3NDERSCREEN_INPUT`
-- `FRE3NDERSCREEN_BEEPER_INPUT`
-- `FRE3NDERSCREEN_BACKLIGHT_POWER`
-- `FRE3NDERSCREEN_DISPLAY_SLEEP_SEC`
+| Variable | Purpose |
+| --- | --- |
+| `FRE3NDERSCREEN_CONFIG` | Writable app JSON config; defaults beside the executable |
+| `FRE3NDERSCREEN_THEME_DIR` | Read-only theme directory; defaults beside the config |
+| `FRE3NDERSCREEN_FRAMEBUFFER` | Target framebuffer; defaults to `/dev/fb0` |
+| `FRE3NDERSCREEN_INPUT` | Target evdev touch device |
+| `FRE3NDERSCREEN_VT` | Target virtual terminal assigned by the display manager |
+| `FRE3NDERSCREEN_READY_FILE` | Target readiness file required by the display manager |
+| `FRE3NDERSCREEN_BEEPER_INPUT` | Optional target input sound device |
+| `FRE3NDERSCREEN_BACKLIGHT_POWER` | Optional target backlight power attribute |
+| `FRE3NDERSCREEN_DISPLAY_SLEEP_SEC` | Nonnegative target sleep timeout override |
 
-The default application config filename is `fre3nderscreen.json`.
+`FRE3NDERSCREEN_MANAGEMENT_SOCKET` and `FRE3NDERSCREEN_USB_ROOT` are
+**simulator-only** overrides. Production uses the fixed Core management socket
+and `/run/fre3nder/usb`. Do not introduce alternative privileged host operations.
 
-## Cleanup principle
+## Validation without a build
 
-Fre3nderScreen is not intended to remain a generic Guppy Screen downstream.
+Run the existing Python checks individually, as CI does. None compiles C++:
 
-When a code path only exists for another printer, architecture, operating
-system, release format, or multi-printer use case, it should be removed unless
-there is a concrete Fre3nder requirement for it.
+```sh
+python3 tests/test_fre3nderscreen_scope.py
+python3 tests/test_fre3nderscreen_architecture.py
+python3 tests/test_optional_hardware_feedback.py
+python3 tests/test_touch_rotation.py
+python3 -m unittest discover -s tests -p 'test_simulator_*.py' -v
+bash -n dev/simulator/entrypoint.sh dev/simulator/simulator.sh dev/simulator/screenshot.sh
+git diff --check
+```
 
-The SDL simulator is the main exception: it is retained as a development tool,
-not as a supported printer platform.
+The integration tests start only the synthetic Management mock over temporary
+Unix sockets. The C++ tests in `tests/` require compilation and therefore a
+separate build authorization. Static checks and fixture tests cannot establish
+that the application compiles or that a page works on hardware.
 
-## Provenance
+After an authorized simulator build, test the changed Tune navigation, command
+availability in Extrude and explicit LED fixture, then check System, Apps and
+Updates for integration regressions. A rebuild after a fix requires new approval.
 
-Fre3nderScreen is derived from Guppy Screen. Keep upstream history, license
-information, and third-party provenance intact while removing unused product
-scope.
+See [RELEASE-2026.2.md](RELEASE-2026.2.md) for downstream changes and the existing
+release commands. Hardware deployment is a separate Fre3nder operation.

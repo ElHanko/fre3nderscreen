@@ -201,7 +201,10 @@ MainPanel::~MainPanel() {
 
 void MainPanel::subscribe() {
   spdlog::trace("main panel subscribing");
-  ws.send_jsonrpc("printer.gcode.help", [this](json &d) { console_panel.handle_macros(d); });
+  ws.send_jsonrpc("printer.gcode.help", [this](json &d) {
+    console_panel.handle_macros(d);
+    extruder_panel.set_available_commands(d);
+  });
   print_panel.subscribe();
 }
 

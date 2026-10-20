@@ -4,6 +4,9 @@
 #include "state.h"
 #include "spdlog/spdlog.h"
 
+#include <algorithm>
+#include <cctype>
+
 LV_IMG_DECLARE(spoolman_img);
 LV_IMG_DECLARE(extrude_img);
 LV_IMG_DECLARE(retract_img);
@@ -356,6 +359,8 @@ ExtruderPanel::ExtruderPanel(KWebSocketClient &websocket_client,
   }
 
   set_button_enabled(spoolman_btn, false);
+  set_button_enabled(load_btn, false);
+  set_button_enabled(unload_btn, false);
   ws.register_notify_update(this);
 }
 
@@ -393,6 +398,20 @@ void ExtruderPanel::foreground()
 void ExtruderPanel::enable_spoolman()
 {
   set_button_enabled(spoolman_btn, true);
+}
+
+void ExtruderPanel::set_available_commands(json &data)
+{
+  std::lock_guard<std::mutex> lock(lv_lock);
+  const auto &commands = data["result"];
+  auto available = [&commands](std::string macro) {
+    macro = macro.substr(0, macro.find_first_of(" \t\r\n"));
+    std::transform(macro.begin(), macro.end(), macro.begin(),
+                   [](unsigned char c) { return std::toupper(c); });
+    return !macro.empty() && commands.is_object() && commands.contains(macro);
+  };
+  set_button_enabled(load_btn, available(load_filament_macro));
+  set_button_enabled(unload_btn, available(unload_filament_macro));
 }
 
 void ExtruderPanel::consume(json &j)
@@ -462,32 +481,12 @@ void ExtruderPanel::handle_callback(lv_event_t *event)
   }
 
   if (button == unload_btn) {
-    /*
-     * Preserve the old compatibility behavior for configured legacy macros.
-     * It can be removed only after the Fre3nder configuration audit proves
-     * these names are no longer used by any supported configuration.
-     */
-    if (unload_filament_macro == "_GUPPY_QUIT_MATERIAL") {
-      ws.gcode_script(fmt::format(
-          "{} EXTRUDER_TEMP={}",
-          unload_filament_macro,
-          selected_value(temp_selector, temp_idx)));
-    } else {
-      ws.gcode_script(unload_filament_macro);
-    }
+    ws.gcode_script(unload_filament_macro);
     return;
   }
 
   if (button == load_btn) {
-    if (load_filament_macro == "_GUPPY_LOAD_MATERIAL") {
-      ws.gcode_script(fmt::format(
-          "{} EXTRUDER_TEMP={} EXTRUDE_LEN={}",
-          load_filament_macro,
-          selected_value(temp_selector, temp_idx),
-          selected_value(length_selector, length_idx)));
-    } else {
-      ws.gcode_script(load_filament_macro);
-    }
+    ws.gcode_script(load_filament_macro);
     return;
   }
 

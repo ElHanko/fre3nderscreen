@@ -8,24 +8,9 @@
 #include <time.h>
 #include <sstream>
 #include <iomanip>
-#include <experimental/filesystem>
 #include <regex>
 
-namespace fs = std::experimental::filesystem;
-
 namespace KUtils {
-
-  bool is_homed() {
-    auto v = State::get_instance()
-      ->get_data("/printer_state/toolhead/homed_axes"_json_pointer);
-    if (!v.is_null()) {
-      std::string homed_axes = v.template get<std::string>();
-      return homed_axes.find("x") != std::string::npos
-	&& homed_axes.find("y") != std::string::npos
-	&& homed_axes.find("z") != std::string::npos;
-    }
-    return false;
-  }
 
   bool is_running_local() {
     Config *conf = Config::get_instance();
@@ -110,31 +95,6 @@ namespace KUtils {
     }
 
     return std::make_pair("", 0);
-  }
-
-  std::string download_file(const std::string &root,
-			    const std::string &fname,
-			    const std::string &dest) {
-
-    auto filename = fs::path(fname).filename();
-    auto dest_fullpath = fs::path(dest) / filename;
-
-    spdlog::trace("root {}, fname {}, base filename {}, dest_fp {}", root, fname,
-		  filename.string(), dest_fullpath.string());
-    Config *conf = Config::get_instance();
-    std::string df_host = conf->get<std::string>("/moonraker_host");
-
-    std::string file_url = fmt::format("http://{}:{}/server/files/{}/{}",
-					df_host,
-					conf->get<uint32_t>("/moonraker_port"),
-					root,
-					HUrl::escape(fname));
-    // threadpool this
-    spdlog::debug("file url {}", file_url);
-    auto size = requests::downloadFile(file_url.c_str(), dest_fullpath.c_str());
-    spdlog::trace("downloaded file size {}", size);
-
-    return dest_fullpath.string();
   }
 
   template <typename Out>
