@@ -154,8 +154,21 @@ class SimulatedApps:
         self.web = "fluidd"
         self.staged = {}
         self.execution = None
+        self.pending_download = None
 
     def overview(self):
+        if self.pending_download is not None:
+            pending = self.pending_download
+            if not pending["polled"]:
+                pending["polled"] = True
+            else:
+                ident = self.execution["package_id"]
+                self.staged[ident] = {"name": pending["package"]["name"], "size": 1024,
+                                      "verified": True, "package": pending["package"]}
+                self.execution = {**self.execution, "state": "succeeded", "result": {
+                    "api_version": 1, "ok": True, "operation": "verify", "package_id": ident,
+                    "package": pending["package"]}}
+                self.pending_download = None
         mib = 1024 * 1024
         return {
             "installed": list(self.installed),
@@ -184,8 +197,28 @@ class SimulatedApps:
         """Mutation affects only in-process demo lists and receipts."""
         if not isinstance(payload, dict):
             return None
+        if self.execution and self.execution["state"] in ("running", "unknown"):
+            return None
         package_id = payload.get("package_id")
         name = payload.get("name")
+        if operation == "repository/download":
+            if set(payload) != {"name", "release_serial"} or type(payload["release_serial"]) is not int:
+                return None
+            if self.repository.get("availability") not in ("checked", "cached"):
+                return None
+            offer = next((item for item in self.repository["updates"] if item["name"] == name
+                          and item["offered"]["release_serial"] == payload["release_serial"]), None)
+            app = self.detail(name)
+            if offer is None or app is None:
+                return None
+            identity = {**app, **offer["offered"], "publisher": offer["publisher"]["id"],
+                        "fingerprint": offer["publisher"]["key_fingerprint"]}
+            identity.pop("running", None)
+            identity.pop("channel", None)
+            self.pending_download = {"package": identity, "polled": False}
+            self.execution = {"id": secrets.token_hex(16), "operation": "repository-download",
+                              "state": "running", "package_id": secrets.token_hex(16), **payload}
+            return self.execution
         if operation in ("verify", "install", "update", "discard") and package_id not in self.staged:
             return None
         if operation in ("remove", "display/select", "update") and not isinstance(name, str):
@@ -211,7 +244,11 @@ class SimulatedApps:
                 return None
             for item in self.installed:
                 if item["name"] == name:
-                    item["version"] = "2.0-demo"
+                    package = self.staged[package_id].get("package")
+                    if package:
+                        item.update({key: package[key] for key in ("version", "release_serial", "publisher", "fingerprint")})
+                    else:
+                        item["version"] = "2.0-demo"
             del self.staged[package_id]
         elif operation == "remove":
             if name == self.display or not self.detail(name):
@@ -234,6 +271,8 @@ class SimulatedApps:
         self.execution = {"id": secrets.token_hex(16), "operation": operation,
                           "state": "succeeded", "name": name, "package_id": package_id,
                           "result": {"api_version": 1, "ok": True, "operation": operation}}
+        if operation == "update":
+            self.execution["result"]["package"] = self.detail(name)
         return self.execution
 
 APPS = SimulatedApps()
@@ -404,7 +443,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
         operation = self.path[len(APPS_PREFIX):]
         if operation not in ("upload", "verify", "install", "update", "remove",
-                             "display/select", "display/disable", "discard", "acknowledge"):
+                             "display/select", "display/disable", "discard", "acknowledge", "repository/download"):
             self.send_json(404, {"api_version": 1, "ok": False,
                                  "error": {"code": "not-found"}})
             return

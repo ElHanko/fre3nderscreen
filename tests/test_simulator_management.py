@@ -138,6 +138,48 @@ class SimulatorManagementTests(unittest.TestCase):
         self.assertEqual(installed["storage"], "home")
         self.assertEqual(apps["packages"], [])
 
+    def test_repository_download_stages_without_installing_and_requires_separate_update(self):
+        prefix = "/fre3nder/api/v1/apps/"
+        initial = self.request("GET", prefix + "status")[1]["apps"]
+        before = next(app for app in initial["installed"] if app["name"] == "fluidd")
+        payload = json.dumps({"name": "fluidd", "release_serial": 2})
+        code, answer = self.request("POST", prefix + "repository/download", payload)
+        self.assertEqual(code, 202)
+        self.assertEqual(answer["operation"], "apps-accepted")
+        job = answer["execution"]
+        self.assertEqual((job["operation"], job["state"]), ("repository-download", "running"))
+        self.assertEqual(self.request("POST", prefix + "repository/download", payload)[0], 409)
+        running = self.request("GET", prefix + "status")[1]["apps"]
+        self.assertEqual(running["execution"]["state"], "running")
+        self.assertEqual(running["packages"], [])
+        ready = self.request("GET", prefix + "status")[1]["apps"]
+        self.assertEqual(ready["execution"]["state"], "succeeded")
+        self.assertEqual(ready["execution"]["id"], job["id"])
+        ident = job["package_id"]
+        self.assertIn(ident, ready["verified_packages"])
+        self.assertEqual(ready["packages"], [{"id": ident, "size": 1024}])
+        self.assertEqual(ready["execution"]["result"]["package"]["name"], "fluidd")
+        for _ in range(2):
+            repeated = self.request("GET", prefix + "status")[1]["apps"]
+            self.assertEqual(repeated["execution"]["id"], job["id"])
+            self.assertEqual(next(app for app in repeated["installed"] if app["name"] == "fluidd"), before)
+            self.assertEqual(repeated["packages"], ready["packages"])
+        code, _ = self.request("POST", prefix + "update", json.dumps({"name": "fluidd", "package_id": ident}))
+        self.assertEqual(code, 202)
+        updated = self.request("GET", prefix + "status")[1]["apps"]
+        app = next(app for app in updated["installed"] if app["name"] == "fluidd")
+        self.assertEqual((app["version"], app["release_serial"]), ("1.38.0", 2))
+        self.assertEqual(app["storage"], before["storage"])
+        self.assertEqual(updated["packages"], [])
+
+    def test_repository_download_rejects_unoffered_release_and_extra_parameters(self):
+        route = "/fre3nder/api/v1/apps/repository/download"
+        for payload in ({"name": "fluidd", "release_serial": 99}, {"name": "missing", "release_serial": 2},
+                        {"name": "fluidd", "release_serial": True},
+                        {"name": "fluidd", "release_serial": 2, "url": "https://example.invalid/"}):
+            self.assertEqual(self.request("POST", route, json.dumps(payload))[0], 409)
+        self.assertEqual(self.request("GET", "/fre3nder/api/v1/apps/status")[1]["apps"]["packages"], [])
+
     def test_mutations_are_simulator_only_and_unknown_rejected(self):
         self.assertEqual(self.request("POST", "/fre3nder/api/v1/apps/arbitrary", "{}")[0], 404)
         self.assertEqual(self.request("POST", "/fre3nder/api/v1/apps/acknowledge", "{}")[0], 409)

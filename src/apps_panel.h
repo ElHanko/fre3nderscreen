@@ -24,7 +24,7 @@ class AppsPanel {
   enum class Operation { Status, Detail, Action };
   enum class Action { Refresh, SelectApp, SelectStage, SelectUsb, Detail,
       Remove, SelectDisplay, DisableDisplay, Verify, InstallSys, InstallHome,
-      Update, Discard, Acknowledge, Upload };
+      Update, Discard, Acknowledge, Upload, Download };
   struct Control { Action action; std::string argument; };
 
   static void event_callback(lv_event_t *event);
@@ -36,6 +36,7 @@ class AppsPanel {
   void poll();
   void render();
   void render_controls();
+  nlohmann::json selected_offer() const;
   void add_button(lv_obj_t *parent, const std::string &text,
                   Action action, const std::string &argument = {}, bool dangerous = false);
   void take_action(Action action);
@@ -61,6 +62,7 @@ class AppsPanel {
   std::string selected_usb;
   std::vector<std::string> usb_files;
   std::string armed_action;
+  std::string completed_download;
   bool open = false;
   bool busy = false;
   bool polling_execution = false;

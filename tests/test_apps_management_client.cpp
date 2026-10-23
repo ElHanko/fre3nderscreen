@@ -13,7 +13,8 @@
 
 static ManagementClient::Response respond(const std::string &route,
                                           const std::string &reply,
-                                          bool post = false)
+                                          bool post = false,
+                                          const std::string &body = "{\"name\":\"fluidd\"}")
 {
   char name[] = "/tmp/fre3nder-apps-client-test-XXXXXX";
   int fd = mkstemp(name);
@@ -33,11 +34,18 @@ static ManagementClient::Response respond(const std::string &route,
     char request[2048];
     ssize_t bytes = recv(connection, request, sizeof(request), 0);
     assert(bytes > 0);
-    const std::string content(request, bytes);
+    std::string content(request, bytes);
+    while (content.find("\r\n\r\n") == std::string::npos ||
+           (post && content.size() < content.find("\r\n\r\n") + 4 + body.size())) {
+      bytes = recv(connection, request, sizeof(request), 0);
+      assert(bytes > 0);
+      content.append(request, bytes);
+    }
     assert(content.find((post ? "POST " : "GET ") + route + " HTTP/1.0") != std::string::npos);
     if (post) {
       assert(content.find("Content-Type: application/json") != std::string::npos);
       assert(content.find("Content-Length:") != std::string::npos);
+      assert(content.substr(content.find("\r\n\r\n") + 4) == body);
     }
     size_t written = 0;
     while (written < reply.size()) {
@@ -51,7 +59,7 @@ static ManagementClient::Response respond(const std::string &route,
   if (route.find("detail?") != std::string::npos)
     result = ManagementClient::app_detail("fluidd", name);
   else if (post)
-    result = ManagementClient::apps_action("remove", "{\"name\":\"fluidd\"}", name);
+    result = ManagementClient::apps_action(route.substr(std::strlen("/fre3nder/api/v1/apps/")), body, name);
   else
     result = ManagementClient::apps_status(name);
   server.join();
@@ -71,6 +79,10 @@ int main()
   auto mutation = respond("/fre3nder/api/v1/apps/remove",
       "HTTP/1.0 202 Accepted\r\n\r\n{\"operation\":\"apps-accepted\"}", true);
   assert(mutation.ok && mutation.status == 202);
+  auto download = respond("/fre3nder/api/v1/apps/repository/download",
+      "HTTP/1.0 202 Accepted\r\n\r\n{\"operation\":\"apps-accepted\"}", true,
+      "{\"name\":\"fluidd\",\"release_serial\":2}");
+  assert(download.ok && download.status == 202);
   auto denied = respond("/fre3nder/api/v1/apps/status",
       "HTTP/1.0 403 Forbidden\r\n\r\n{}");
   assert(!denied.ok && denied.status == 403 && denied.error == "Management access denied");

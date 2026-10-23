@@ -86,7 +86,7 @@ ManagementClient::Response ManagementClient::apps_action(const std::string &acti
   if (action != "verify" && action != "install" && action != "update" &&
       action != "remove" && action != "display/select" &&
       action != "display/disable" && action != "discard" &&
-      action != "acknowledge")
+      action != "acknowledge" && action != "repository/download")
     return failure("Unsupported application operation");
   if (json_body.empty() || json_body.size() > 256)
     return failure("Invalid application operation body");

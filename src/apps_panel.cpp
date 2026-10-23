@@ -242,6 +242,39 @@ void AppsPanel::poll()
           polling_execution = state == "running" || state == "uploading";
           last_refresh = lv_tick_get();
           lv_label_set_text(message, "");
+          const json execution = field(snapshot, "execution");
+          const std::string execution_id = str(execution, "id", "");
+          if (str(execution, "operation", "") == "repository-download" &&
+              !execution_id.empty() && execution_id != completed_download &&
+              (state == "succeeded" || state == "failed" || state == "unknown")) {
+            completed_download = execution_id;
+            if (state == "succeeded") {
+              const std::string id = str(execution, "package_id", "");
+              const std::string name = str(execution, "name", "");
+              const json identity = field(field(execution, "result"), "package");
+              const json verified = field(snapshot, "verified_packages");
+              const json packages = field(snapshot, "packages");
+              bool trusted = false, staged = false, installed = false;
+              const json apps = field(snapshot, "installed");
+              if (apps.is_array()) for (const json &item : apps)
+                if (str(item, "name", "") == name) installed = true;
+              if (verified.is_array()) for (const json &item : verified)
+                if (item == id) trusted = true;
+              if (packages.is_array()) for (const json &item : packages)
+                if (str(item, "id", "") == id) staged = true;
+              if (package_id(id) && app_name(name) && trusted && staged && installed &&
+                  str(identity, "name", "") == name &&
+                  field(identity, "release_serial") == field(execution, "release_serial")) {
+                if (selected_app == name) {
+                  selected_stage = id;
+                  clear_confirmation();
+                }
+                lv_label_set_text(message, "Download complete. Signature verified. Ready for separate update confirmation; not installed.");
+              } else {
+                lv_label_set_text(message, "Downloaded package is not confirmed as verified staging for this app.");
+              }
+            }
+          }
           scan_usb();
           render();
         } else if (request_kind == Operation::Detail) {
@@ -353,6 +386,10 @@ void AppsPanel::render()
   if (execution.is_object()) {
     const std::string state = str(execution, "state");
     summary_text += "\nLast operation: " + str(execution, "operation") + " (" + state + ")";
+    if (str(execution, "operation", "") == "repository-download") {
+      if (state == "running") summary_text += "\nDownloading and verifying...";
+      if (state == "succeeded") summary_text += "\nDownload finished. Installation has not started.";
+    }
     const json issue = field(execution, "error");
     if (issue.is_object()) summary_text += "\n" + str(issue, "message");
   }
@@ -416,6 +453,17 @@ void AppsPanel::clear_confirmation()
   armed_action.clear();
 }
 
+json AppsPanel::selected_offer() const
+{
+  const json repository = field(snapshot, "repository");
+  const std::string availability = str(repository, "availability", "");
+  const json updates = field(repository, "updates");
+  if ((availability == "checked" || availability == "cached") && updates.is_array())
+    for (const json &update : updates)
+      if (str(update, "name", "") == selected_app) return update;
+  return nullptr;
+}
+
 void AppsPanel::render_controls()
 {
   lv_obj_clean(actions);
@@ -444,6 +492,17 @@ void AppsPanel::render_controls()
   if (!selected_app.empty()) {
     label(actions, "App: " + selected_app);
     add_button(actions, "Read details", Action::Detail);
+    const json offer = selected_offer();
+    if (offer.is_object()) {
+      const json offered = field(offer, "offered");
+      const std::string confirmation = "download:" + selected_app + ":" + field(offered, "release_serial").dump();
+      label(actions, "Update: " + str(offered, "version") + " (" + str(offered, "channel") + ")");
+      if (str(field(snapshot, "repository"), "availability", "") == "cached")
+        label(actions, "Offer from an older cached repository check.");
+      label(actions, "Download verifies only. Installation needs a separate confirmation.");
+      add_button(actions, armed_action == confirmation ? "Confirm download" :
+                 "Download update", Action::Download);
+    }
     const json apps = field(snapshot, "installed");
     bool is_display = false;
     if (apps.is_array()) for (const json &app : apps)
@@ -495,6 +554,15 @@ void AppsPanel::take_action(Action action)
   json body = json::object();
   std::string confirmation;
   switch (action) {
+    case Action::Download: {
+      const json offer = selected_offer();
+      if (!app_name(selected_app) || !offer.is_object()) return;
+      const json serial = field(field(offer, "offered"), "release_serial");
+      operation = "repository/download";
+      body["name"] = selected_app; body["release_serial"] = serial;
+      confirmation = "download:" + selected_app + ":" + serial.dump();
+      break;
+    }
     case Action::Remove:
       if (!app_name(selected_app) || str(field(snapshot, "display"), "active", "") == selected_app) return;
       operation = "remove"; body["name"] = selected_app;
