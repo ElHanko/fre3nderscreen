@@ -290,6 +290,10 @@ void AppsPanel::add_button(lv_obj_t *parent, const std::string &text,
   lv_obj_add_event_cb(button, event_callback, LV_EVENT_CLICKED, this);
   lv_obj_t *title = label(button, text, dangerous ? RED : WHITE);
   lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, 0);
+  if (action == Action::SelectApp && text.find('\n') != std::string::npos) {
+    lv_obj_set_height(button, LV_SIZE_CONTENT);
+    lv_obj_set_style_min_height(button, 50, 0);
+  }
   controls.emplace(button, Control{action, argument});
 }
 
@@ -327,8 +331,25 @@ void AppsPanel::render()
   const std::string active_display = str(display, "active", "None");
   const std::string active_web = str(web, "active", "None");
   const json execution = field(snapshot, "execution");
+  const json repository = field(snapshot, "repository");
+  const std::string availability = str(repository, "availability", "unavailable");
+  const json updates = field(repository, "updates");
   std::string summary_text = "INSTALLED APPS\nWeb: " + active_web +
                              "\nDisplay: " + active_display;
+  if (availability == "checked") {
+    summary_text += "\nRepository: check succeeded";
+    if (updates.is_array() && updates.empty()) summary_text += "\nNo updates offered.";
+  } else if (availability == "cached") {
+    summary_text += "\nRepository: check failed (cached information)";
+  } else if (str(repository, "configuration", "") == "unconfigured") {
+    summary_text += "\nRepository: not configured. Update availability unknown.";
+  } else {
+    summary_text += "\nRepository: unavailable. Update availability unknown.";
+  }
+  const std::string last_success = str(repository, "last_success", "");
+  if (!last_success.empty()) summary_text += "\nLast successful check: " + last_success;
+  const std::string repository_error = str(field(repository, "error"), "message", "");
+  if (!repository_error.empty()) summary_text += "\n" + repository_error;
   if (execution.is_object()) {
     const std::string state = str(execution, "state");
     summary_text += "\nLast operation: " + str(execution, "operation") + " (" + state + ")";
@@ -347,6 +368,15 @@ void AppsPanel::render()
       if (name == active_display) text += "  (Display)";
       if (name == active_web) text += "  (Web)";
       if (name == selected_app) text = "> " + text;
+      if ((availability == "checked" || availability == "cached") && updates.is_array()) {
+        for (const json &update : updates) {
+          if (str(update, "name", "") != name) continue;
+          const json offered = field(update, "offered");
+          text += "\nUpdate: " + str(offered, "version") + " (" + str(offered, "channel") + ")";
+          if (availability == "cached") text += " - Cached information";
+          break;
+        }
+      }
       add_button(installed_list, text, Action::SelectApp, name);
     }
   }

@@ -99,8 +99,14 @@ class SimulatorManagementTests(unittest.TestCase):
         code, data = self.request("GET", "/fre3nder/api/v1/apps/status")
         self.assertEqual(code, 200)
         self.assertEqual(data["operation"], "apps-status")
-        self.assertEqual(len(data["apps"]["installed"]), 3)
+        self.assertEqual(len(data["apps"]["installed"]), 4)
         self.assertEqual(data["apps"]["display"]["active"], "fre3nderscreen")
+        repository = data["apps"]["repository"]
+        self.assertEqual(repository["availability"], "checked")
+        self.assertEqual(repository["check"], "ok")
+        self.assertEqual(repository["updates"][0]["name"], "fluidd")
+        self.assertEqual(repository["updates"][0]["offered"],
+                         {"version": "1.38.0", "release_serial": 2, "channel": "stable"})
         self.assertEqual(self.request("GET", "/fre3nder/api/v1/apps/detail?name=fluidd")[0], 200)
         self.assertEqual(self.request("GET", "/fre3nder/api/v1/apps/detail?name=missing")[0], 404)
         code, data = self.request("POST", "/fre3nder/api/v1/apps/remove", '{"name":"demo-app"}')

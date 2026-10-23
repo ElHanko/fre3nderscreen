@@ -133,6 +133,23 @@ class SimulatedApps:
              "web_frontend": False, "display_frontend": False, "display_api": None,
              "autostart": True},
         ]
+        self.installed.append({
+            "name": "fre3nder-app-update", "version": "1.0-demo", "storage": "home",
+            "publisher": "fre3nder-official", "release_serial": 1,
+            "web_frontend": False, "display_frontend": False, "display_api": None,
+            "autostart": True})
+        # Preselected API output only: the simulator does not compare versions.
+        self.repository = {
+            "client_installed": True, "configuration": "configured", "check": "ok",
+            "availability": "checked", "error": None,
+            "identity": {"name": "Simulator repository", "key_fingerprint": "c" * 64,
+                         "base_url": "https://repository.example.invalid/"},
+            "revision": 7, "last_attempt": "2026-10-20T10:00:00+00:00",
+            "last_success": "2026-10-20T10:00:00+00:00",
+            "updates": [{"name": "fluidd", "publisher": {
+                "id": "fre3nder-official", "key_fingerprint": "a" * 64},
+                "installed": {"version": "1.36.0-demo", "release_serial": 1},
+                "offered": {"version": "1.38.0", "release_serial": 2, "channel": "stable"}}]}
         self.display = "fre3nderscreen"
         self.web = "fluidd"
         self.staged = {}
@@ -151,6 +168,7 @@ class SimulatedApps:
             "verified_packages": sorted(key for key, value in self.staged.items()
                                         if value["verified"]),
             "execution": self.execution,
+            "repository": self.repository,
             "storage": {"available_bytes": 2048 * mib,
                         "max_package_bytes": 256 * mib, "reserve_bytes": 64 * mib,
                         "sys": {"available_bytes": 1024 * mib},
