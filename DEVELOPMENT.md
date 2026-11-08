@@ -27,7 +27,9 @@ Configured Load/Unload commands are enabled from `printer.gcode.help` results.
 No Guppy filament parameters are injected. Keep the existing `default_macros`
 configuration keys; they are also used by the package recipe.
 
-LVGL 9.6.0, libhv 1.3.4 and spdlog 1.17.0 are active submodules. The Makefile
+LVGL 9.6.0, libhv 1.3.4 (embedded nlohmann/json 3.12.0) and spdlog 1.17.0
+(bundled fmt 12.1.0) are the three active submodules. `lv_drivers` is removed;
+display and input drivers come from LVGL 9. The Makefile
 builds LVGL through its upstream static CMake target and compiles
 all `src/*.cpp`, `assets/*.c` and `assets/material_46/*.c`, plus touch calibration
 for target builds. Deleting an unused `.cpp` removes its build inclusion. Assets
@@ -42,6 +44,15 @@ Fre3nder owns the Buildroot toolchain and target cross-build.
 `fre3nder/build/x2000/fre3nderscreen-component.sh` builds the neutral artifact.
 `fre3nder-apps` imports that artifact and builds the signed `.fre3app`.
 Production packaging, lifecycle scripts and deployment are outside this repo.
+
+Building needs GNU Make, C and C++17 compilers, CMake and Python 3. The simulator
+also needs SDL2 development files; its Debian 13 Docker image supplies them.
+The Makefile's `build` target builds libhv's library target, spdlog and LVGL,
+then the application at `build/bin/fre3nderscreen`. LVGL's static archive is
+`lvgl/build/liblvgl.a`, configured with this repository's `lv_conf.h` and
+`LV_DISABLE_API_MAPPING`; spdlog uses its bundled fmt. The production builder
+supplies the Buildroot cross-compiler prefix and checks static MIPS32r2
+hardfloat linkage/ABI. Do not reuse simulator output as a target artifact.
 
 The application Makefile accepts:
 
@@ -58,13 +69,12 @@ blanking and pan reset; backlight and beeper paths still come from Fre3nder.
 The SDL simulator uses LVGL's integrated software backend and native mouse,
 keyboard and mousewheel at 272×480 with development-only API mocks.
 
-The LVGL 9.6 source migration has not been built or hardware-qualified. The
-combined build still needs to validate CMake configuration, SDL integration,
-static MIPS linking and ABI. Compare all pages, dialogs, Bed Mesh/Spoolman table
-colors, chart history, icons, DejaVu text and PNG thumbnails in SDL. On hardware,
-check colors/rotation, existing and new affine calibration at the corners,
-standby/wake, click feedback and VT handoff without framebuffer writes or stale
-touch actions. Measure RAM/CPU use rather than assuming a performance change.
+The migration at `3a8ad6a` passed the MIPS/X2000 cross-build, Docker/SDL build
+and interactive use, full Fre3nder Development build, signed packaging and
+reference-device checks. See [the exact qualification scope](README.md#hardware-qualification)
+for the installed app identity, RootFS-seed update, touch, 300-second
+standby/wake and VT handoff. These results do not establish unreported page,
+new-calibration or performance results, or qualify the later OS identity change.
 
 The normal visual validation command, **only after explicit build approval**:
 

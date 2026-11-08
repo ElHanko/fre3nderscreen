@@ -17,7 +17,13 @@ directory, so simulator objects do not contaminate MIPS build output.
 ## Prerequisites
 
 - Docker with the Compose plugin
-- initialized repository submodules
+- initialized LVGL 9.6.0, libhv 1.3.4 and spdlog 1.17.0 submodules
+
+The Debian 13 image supplies C and C++17 compilers, GNU Make, CMake, Python 3 and
+SDL2 development files. LVGL's static CMake target uses Screen's `lv_conf.h`;
+its integrated SDL software backend provides the window, mouse, keyboard and
+mousewheel at 272x480. No separate `lv_drivers` checkout is used. spdlog uses
+bundled fmt 12.1.0, and libhv embeds nlohmann/json 3.12.0.
 
 Initialize submodules once if needed:
 
@@ -128,9 +134,10 @@ The production UI sends only explicit commands to Fre3nder's existing Core API.
 
 The simulator is not a permissions, signature, flash or boot qualification.
 Separately, the operator reports hardware tests of System, Apps and the full
-OTA flow at Screen `65b37b9` with Fre3nder 2026.5; see the precise
-[qualification scope](../../README.md#hardware-qualification). Those results do
-not automatically qualify subsequent cleanup builds.
+OTA flow at Screen `65b37b9` with Fre3nder 2026.5. The later upstream migration
+at `3a8ad6a` passed simulator build/interactive use and the separately reported
+hardware checks with app `2026.2.3a8ad6a-fre3nder.0.937984e`; see the precise
+[qualification scope](../../README.md#hardware-qualification).
 
 ## Screenshot generator
 
@@ -183,7 +190,9 @@ do not change the production backend or connect a printer for this test.
 Screenshots are local artifacts under `build/ui-screenshots/`. The old upstream
 landscape screenshots were removed because they do not describe the portrait UI.
 
-Normal runs use incremental compilation in `build/docker-sim/`. To force a full
+Normal runs use incremental compilation in `build/docker-sim/`. Each run
+refreshes the spdlog archive after source synchronization and rebuilds LVGL
+through its CMake target before linking the app. To force a full
 simulator rebuild after obtaining approval:
 
 ```bash
