@@ -12,11 +12,11 @@ The main navigation is **Home, Control, Files, Settings, More**:
 - Printer status, temperatures, movement, extrusion, fans and configured LEDs.
 - Moonraker print files, print control, macros and a G-code console.
 - Fine Tune, motion limits, bed mesh and Moonraker power devices under More → Tune.
-- Native **System**, **Apps** and **Updates** pages under Settings → Fre3nder.
+- Native **System**, **Apps**, **Updates** and **Backups** pages under Settings → Fre3nder.
 - UI settings, display sleep, touch feedback and Screen restart.
 
 Fre3nderScreen connects to one local Moonraker endpoint for Klipper control.
-System information, app management and OTA operations use Fre3nder Core's
+System information, app management, OTA and backup operations use Fre3nder Core's
 HTTP/JSON API over `/run/fre3nder-management/api.sock`. Core performs privileged
 operations; the UI sends requests and displays their results.
 
@@ -54,6 +54,12 @@ and **Fre3nderScreen commit `65b37b9`**:
 This qualification covers those tested paths at that commit. It does not
 qualify every application function or the subsequent cleanup changes. The
 `2026.2` release artifact still needs its own build and regression validation.
+
+The operator additionally reports successful testing of the backup development
+changes on the reference Ender-3 V3 KE running Fre3nder **2026.5.a**: package
+signature verification and installation, the backup panel on the physical
+touchscreen, and a SYS backup to HOME. HOME backups and USB destinations remain
+unqualified on hardware; simulator receipts do not qualify those paths.
 
 ## Development and release
 

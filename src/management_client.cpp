@@ -99,6 +99,19 @@ ManagementClient::Response ManagementClient::upload_app(const std::string &absol
   return request("POST", std::string(PREFIX) + "upload", {}, absolute_path, socket_path);
 }
 
+ManagementClient::Response ManagementClient::backup_status(const std::string &socket_path)
+{
+  return request("GET", "/fre3nder/api/v1/backup/status", {}, {}, socket_path);
+}
+
+ManagementClient::Response ManagementClient::backup_create(const std::string &json_body,
+    const std::string &socket_path)
+{
+  if (json_body.empty() || json_body.size() > 256)
+    return failure("Invalid backup operation body");
+  return request("POST", "/fre3nder/api/v1/backup/create", json_body, {}, socket_path);
+}
+
 ManagementClient::Response ManagementClient::ota_status(const std::string &socket_path)
 {
   return request("GET", std::string(OTA_PREFIX) + "status", {}, {}, socket_path);

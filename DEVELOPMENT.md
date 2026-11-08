@@ -16,10 +16,10 @@ is not build authorization.
 printer objects and initializes the pages. `State` consumes Moonraker status.
 `MainPanel` owns the Home, Control, Files, Settings and More navigation.
 
-Settings separates `Fre3nderPanel` (WiFi placeholder, System, Apps, Updates)
+Settings separates `Fre3nderPanel` (WiFi placeholder, System, Apps, Updates, Backups)
 from `Fre3nderScreenPanel` (UI-local preferences and self restart).
 `ManagementClient` sends HTTP/JSON requests over the existing Core Unix socket;
-System, Apps and OTA pages display results without implementing platform policy.
+System, Apps, OTA and Backup pages display results without implementing platform policy.
 
 The More → Tune page contains Fine Tune, Limits, Bed Mesh and Power. Unsupported
 Guppy calibration/TMC dialogs have been removed; see [the audit](RELEASE-2026.2.md).

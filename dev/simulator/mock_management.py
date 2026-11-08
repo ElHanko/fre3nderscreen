@@ -391,6 +391,41 @@ OTA = SimulatedOta()
 
 
 
+BACKUP_PREFIX = "/fre3nder/api/v1/backup/"
+
+
+class SimulatedBackup:
+    """Receipt-only display fixture: no files or real backups are created."""
+    def __init__(self):
+        self.execution = None
+        self.usb = True
+
+    def overview(self):
+        return {"backup_offer": {
+            "home": {"targets": ["download", "usb"] if self.usb else ["download"]},
+            "sys": {"targets": ["download", "usb", "home"] if self.usb else ["download", "home"]}},
+            "execution": self.execution, "downloads": []}
+
+    def create(self, payload):
+        if not isinstance(payload, dict) or set(payload) != {"role", "target"}:
+            return None
+        role, target = payload["role"], payload["target"]
+        if role not in ("home", "sys") or target not in self.overview()["backup_offer"][role]["targets"]:
+            return None
+        selected = {"selected": True, "target": target, "role": role.upper(),
+            "archive": "/run/fre3nder/usb/Fre3nderBackup/simulator.tar" if target == "usb" else "/home/Fre3nderBackup/simulator.tar",
+            "size": 10240, "sha256": "a" * 64, "verified": True}
+        result = {"complete": True, "home": {"selected": False, "target": None},
+                  "sys": {"selected": False, "target": None}}
+        result[role] = selected
+        self.execution = {"id": secrets.token_hex(16), "operation": "create", "state": "succeeded",
+            **payload, "result": {"backup_result": result}}
+        return self.execution
+
+
+BACKUP = SimulatedBackup()
+
+
 class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.0"
     server_version = "Fre3nderManagementSimulator/1"
@@ -412,7 +447,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if self.path == ROUTE:
+        if self.path == BACKUP_PREFIX + "status":
+            self.send_json(200, {"api_version": 1, "ok": True,
+                                "operation": "backup-status", "backup": BACKUP.overview()})
+        elif self.path == ROUTE:
             self.send_json(200, system_snapshot())
         elif self.path == OTA_PREFIX + "status":
             self.send_json(200, {"api_version": 1, "ok": True,
@@ -434,6 +472,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
                                  "error": {"code": "not-found"}})
 
     def do_POST(self):
+        if self.path == BACKUP_PREFIX + "create":
+            try:
+                length = int(self.headers.get("Content-Length", "-1"))
+                if not 0 < length <= 256 or self.headers.get("Content-Type") != "application/json":
+                    raise ValueError("invalid backup body")
+                payload = json.loads(self.rfile.read(length))
+                job = BACKUP.create(payload)
+            except (ValueError, TypeError):
+                job = None
+            if job is None:
+                self.send_json(400, {"api_version": 1, "ok": False,
+                                    "error": {"code": "invalid-selection", "message": "Invalid backup selection"}})
+            else:
+                self.send_json(202, {"api_version": 1, "ok": True,
+                                    "operation": "backup-accepted", "execution": job})
+            return
         if self.path.startswith(OTA_PREFIX):
             self.handle_ota_post()
             return

@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 static ManagementClient::Response respond(const std::string &route,
-                                          const std::string &reply, bool post)
+                                          const std::string &reply, bool post, bool backup = false)
 {
   char name[] = "/tmp/fre3nder-ota-client-XXXXXX";
   int file = mkstemp(name);
@@ -36,7 +36,9 @@ static ManagementClient::Response respond(const std::string &route,
     assert(send(connection, reply.data(), reply.size(), MSG_NOSIGNAL) == (ssize_t)reply.size());
     close(connection);
   });
-  ManagementClient::Response answer = post ?
+  ManagementClient::Response answer = backup ? (post ?
+      ManagementClient::backup_create("{\"role\":\"sys\",\"target\":\"home\"}", name)
+      : ManagementClient::backup_status(name)) : post ?
       ManagementClient::ota_action("backup-plan",
           "{\"package_id\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"home\":\"usb\",\"sys\":\"home\"}", name)
       : ManagementClient::ota_status(name);
@@ -54,6 +56,14 @@ int main()
   auto accepted = respond("/fre3nder/api/v1/ota/backup-plan",
       "HTTP/1.0 202 Accepted\r\n\r\n{\"operation\":\"ota-accepted\"}", true);
   assert(accepted.ok && accepted.status == 202);
+  auto backup_status = respond("/fre3nder/api/v1/backup/status",
+      "HTTP/1.0 200 OK\r\n\r\n{\"ok\":true}", false, true);
+  assert(backup_status.ok);
+  auto backup_created = respond("/fre3nder/api/v1/backup/create",
+      "HTTP/1.0 202 Accepted\r\n\r\n{\"operation\":\"backup-accepted\"}", true, true);
+  assert(backup_created.ok && backup_created.status == 202);
+  assert(!ManagementClient::backup_create("").ok);
+  assert(!ManagementClient::backup_create(std::string(257, 'x')).ok);
   assert(!ManagementClient::ota_action("raw-write", "{}").ok);
   assert(!ManagementClient::ota_action("write", "").ok);
   assert(!ManagementClient::upload_ota("/etc/passwd").ok);

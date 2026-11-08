@@ -77,6 +77,23 @@ class SimulatorManagementTests(unittest.TestCase):
         self.assertEqual(headers[b"Content-Type"], b"application/json; charset=utf-8")
         return status, json.loads(body)
 
+    def test_backup_api_receipts_and_role_target_validation(self):
+        prefix = "/fre3nder/api/v1/backup/"
+        code, answer = self.request("GET", prefix + "status")
+        self.assertEqual(code, 200)
+        self.assertEqual(answer["operation"], "backup-status")
+        self.assertIn("usb", answer["backup"]["backup_offer"]["home"]["targets"])
+        for role, target in (("home", "usb"), ("sys", "usb"), ("sys", "home")):
+            code, answer = self.request("POST", prefix + "create", json.dumps({"role": role, "target": target}))
+            self.assertEqual(code, 202)
+            self.assertEqual(answer["operation"], "backup-accepted")
+            code, answer = self.request("GET", prefix + "status")
+            receipt = answer["backup"]["execution"]
+            self.assertEqual(receipt["state"], "succeeded")
+            self.assertTrue(receipt["result"]["backup_result"][role]["verified"])
+        self.assertEqual(self.request("POST", prefix + "create", '{"role":"home","target":"home"}')[0], 400)
+        self.assertEqual(self.request("POST", prefix + "create", '{"role":"sys","target":"/tmp"}')[0], 400)
+
     def test_system_details_contract_and_synthetic_content(self):
         self.assertEqual(stat.S_IMODE(self.sock_path.stat().st_mode), 0o600)
         code, data = self.request("GET", ROUTE)

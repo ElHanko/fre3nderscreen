@@ -38,6 +38,7 @@ Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
   , system_panel()
   , apps_panel()
   , ota_panel()
+  , backup_panel()
   , cont(lv_obj_create(lv_scr_act()))
   , header_cont(lv_obj_create(cont))
   , back_btn(lv_btn_create(header_cont))
@@ -46,6 +47,7 @@ Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
   , system_btn(lv_btn_create(cont))
   , apps_btn(lv_btn_create(cont))
   , ota_btn(lv_btn_create(cont))
+  , backup_btn(lv_btn_create(cont))
 {
   lv_obj_move_background(cont);
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
@@ -57,10 +59,11 @@ Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
 
   static lv_coord_t rows[] = {
     42,
-    90,
-    90,
-    90,
-    90,
+    76,
+    76,
+    76,
+    76,
+    76,
     LV_GRID_TEMPLATE_LAST
   };
   static lv_coord_t cols[] = {
@@ -99,7 +102,7 @@ Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
       wifi_btn,
       LV_GRID_ALIGN_STRETCH, 0, 1,
       LV_GRID_ALIGN_START, 1, 1);
-  lv_obj_set_height(wifi_btn, 90);
+  lv_obj_set_height(wifi_btn, 76);
   style_button(wifi_btn);
   lv_obj_set_style_pad_all(wifi_btn, 12, 0);
   lv_obj_set_flex_flow(wifi_btn, LV_FLEX_FLOW_COLUMN);
@@ -128,7 +131,7 @@ Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
 
   lv_obj_set_grid_cell(system_btn, LV_GRID_ALIGN_STRETCH, 0, 1,
                        LV_GRID_ALIGN_START, 2, 1);
-  lv_obj_set_height(system_btn, 90);
+  lv_obj_set_height(system_btn, 76);
   style_button(system_btn);
   lv_obj_set_style_pad_all(system_btn, 12, 0);
   lv_obj_set_flex_flow(system_btn, LV_FLEX_FLOW_COLUMN);
@@ -150,7 +153,7 @@ Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
 
   lv_obj_set_grid_cell(apps_btn, LV_GRID_ALIGN_STRETCH, 0, 1,
                        LV_GRID_ALIGN_START, 3, 1);
-  lv_obj_set_height(apps_btn, 90);
+  lv_obj_set_height(apps_btn, 76);
   style_button(apps_btn);
   lv_obj_set_style_pad_all(apps_btn, 12, 0);
   lv_obj_set_flex_flow(apps_btn, LV_FLEX_FLOW_COLUMN);
@@ -170,7 +173,7 @@ Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
 
   lv_obj_set_grid_cell(ota_btn, LV_GRID_ALIGN_STRETCH, 0, 1,
                        LV_GRID_ALIGN_START, 4, 1);
-  lv_obj_set_height(ota_btn, 90);
+  lv_obj_set_height(ota_btn, 76);
   style_button(ota_btn);
   lv_obj_set_style_pad_all(ota_btn, 12, 0);
   lv_obj_set_flex_flow(ota_btn, LV_FLEX_FLOW_COLUMN);
@@ -187,6 +190,18 @@ Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
   lv_obj_set_style_text_font(ota_label, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(ota_label, lv_color_hex(COLOR_TEXT), 0);
   lv_obj_center(ota_label);
+
+  lv_obj_set_grid_cell(backup_btn, LV_GRID_ALIGN_STRETCH, 0, 1,
+                       LV_GRID_ALIGN_START, 5, 1);
+  lv_obj_set_height(backup_btn, 76);
+  style_button(backup_btn);
+  lv_obj_add_event_cb(backup_btn, &Fre3nderPanel::_handle_callback,
+                      LV_EVENT_CLICKED, this);
+  auto *backup_label = lv_label_create(backup_btn);
+  lv_label_set_text(backup_label, "Backups");
+  lv_obj_set_style_text_font(backup_label, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(backup_label, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_center(backup_label);
 }
 
 Fre3nderPanel::~Fre3nderPanel()
@@ -221,5 +236,7 @@ void Fre3nderPanel::handle_callback(lv_event_t *event)
     apps_panel.foreground();
   } else if (button == ota_btn) {
     ota_panel.foreground();
+  } else if (button == backup_btn) {
+    backup_panel.foreground();
   }
 }
