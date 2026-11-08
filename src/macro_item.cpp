@@ -1,4 +1,5 @@
 #include "macro_item.h"
+#include "spdlog/fmt/ranges.h"
 #include "spdlog/spdlog.h"
 
 namespace {

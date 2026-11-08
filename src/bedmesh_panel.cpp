@@ -1,6 +1,7 @@
 #include "bedmesh_panel.h"
 #include "state.h"
 #include "spdlog/fmt/fmt.h"
+#include "spdlog/fmt/ranges.h"
 #include "spdlog/spdlog.h"
 
 #include <vector>

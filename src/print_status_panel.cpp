@@ -4,6 +4,7 @@
 #include "state.h"
 #include "utils.h"
 #include "spdlog/fmt/fmt.h"
+#include "spdlog/fmt/ranges.h"
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
