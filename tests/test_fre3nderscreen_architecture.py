@@ -9,7 +9,7 @@ root = Path(__file__).resolve().parents[1]
 assert not (root / "src/ui_layout.h").exists()
 assert not (root / "assets/material").exists()
 
-files = [root / "Makefile", root / "lv_drv_conf.h"]
+files = [root / "Makefile", root / "lv_conf.h"]
 files += sorted((root / "src").glob("*.cpp"))
 files += sorted((root / "src").glob("*.h"))
 
@@ -30,18 +30,20 @@ for path in files:
     assert not re.search(r"\bdf\(\)", text), f"{path.relative_to(root)} still contains df()"
 
 main = (root / "src/main.cpp").read_text(encoding="utf-8")
-assert "disp_drv.sw_rotate = 1;" in main
-assert "disp_drv.rotated = LV_DISP_ROT_90;" in main
-
-driver = (root / "lv_drv_conf.h").read_text(encoding="utf-8")
-sim = driver.split("#else // SIMULATOR", 1)[1]
-assert re.search(r"#\s*define\s+SDL_HOR_RES\s+272\b", sim)
-assert re.search(r"#\s*define\s+SDL_VER_RES\s+480\b", sim)
-assert "EVDEV_CALIBRATE" not in (root / "Makefile").read_text(encoding="utf-8")
-assert re.search(
-    r"#\s*define\s+EVDEV_CALIBRATE\s+1\b",
-    driver,
-), "touch calibration must stay enabled in lv_drv_conf.h"
+assert "lv_display_set_rotation(disp, LV_DISPLAY_ROTATION_90)" in main
+assert "lv_display_get_horizontal_resolution(disp) != 480" in main
+assert "lv_display_get_vertical_resolution(disp) != 272" in main
+assert "LV_COLOR_FORMAT_XRGB8888" in main
+assert "lv_sdl_window_create(272, 480)" in main
+assert "lv_evdev_set_raw_mode(touch, true)" in main
+assert "lv_tc_indev_init(touch)" in main
+assert not (root / "lv_drv_conf.h").exists()
+assert not (root / "lv_drivers").exists()
+assert "lv_drivers" not in (root / ".gitmodules").read_text()
+assert "LV_DISABLE_API_MAPPING" in (root / "Makefile").read_text()
+config = (root / "lv_conf.h").read_text()
+for setting in ("LV_USE_LINUX_FBDEV 1", "LV_USE_EVDEV 1", "LV_USE_SDL 1", "LV_USE_LODEPNG 1"):
+    assert setting in config
 
 sim_config = json.loads(
     (root / "dev/simulator/fre3nderscreen.json").read_text(encoding="utf-8")

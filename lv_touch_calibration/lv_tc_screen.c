@@ -5,9 +5,11 @@
 #include "lv_tc_screen.h"
 
 #include "math.h"
+#include <string.h>
 
 #include "lv_tc.h"
 #include "lv_tc_config.h"
+#include "lvgl/src/core/lv_obj_class_private.h"
 
 
 /*********************
@@ -78,13 +80,13 @@ void lv_tc_screen_start_with_config(lv_obj_t* screenObj, lv_tc_start_delay_t sta
     lv_tc_screen_t *tCScreenObj = (lv_tc_screen_t*)screenObj;
 
     if(tCScreenObj->recalibrateTimer) {
-        lv_timer_del(tCScreenObj->recalibrateTimer);
+        lv_timer_delete(tCScreenObj->recalibrateTimer);
         tCScreenObj->recalibrateTimer = NULL;
     }
 
     lv_label_set_text_static(tCScreenObj->msgLabelObj, LV_TC_START_MSG);
-    lv_obj_add_flag(tCScreenObj->recalibrateBtnObj, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(tCScreenObj->acceptBtnObj, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(tCScreenObj->recalibrateBtnObj, true);
+    lv_obj_set_hidden(tCScreenObj->acceptBtnObj, true);
     
     lv_obj_align(tCScreenObj->msgLabelObj, LV_ALIGN_CENTER, 0, -50);
     lv_obj_align_to(tCScreenObj->recalibrateBtnObj, tCScreenObj->msgLabelObj, LV_ALIGN_OUT_BOTTOM_MID, -140, 20);
@@ -129,16 +131,16 @@ static void lv_tc_screen_constructor(const lv_obj_class_t *class_p, lv_obj_t *ob
         lv_tc_screen_set_points(obj, points);
     #endif
 
-    lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_scrollable(obj, false);
 
 
-    LV_IMG_DECLARE(lv_tc_indicator_img);
+    LV_IMAGE_DECLARE(lv_tc_indicator_img);
 
-    tCScreenObj->indicatorObj = lv_img_create(obj);
-    lv_img_set_src(tCScreenObj->indicatorObj, &lv_tc_indicator_img);
-    lv_obj_set_style_img_recolor_opa(tCScreenObj->indicatorObj, LV_OPA_COVER, 0);
-    lv_obj_set_style_img_recolor(tCScreenObj->indicatorObj, lv_color_white(), 0);    
-    lv_obj_clear_flag(tCScreenObj->indicatorObj, LV_OBJ_FLAG_CLICKABLE);
+    tCScreenObj->indicatorObj = lv_image_create(obj);
+    lv_image_set_src(tCScreenObj->indicatorObj, &lv_tc_indicator_img);
+    lv_obj_set_style_image_recolor_opa(tCScreenObj->indicatorObj, LV_OPA_COVER, 0);
+    lv_obj_set_style_image_recolor(tCScreenObj->indicatorObj, lv_color_white(), 0);
+    lv_obj_set_clickable(tCScreenObj->indicatorObj, false);
 
 
     tCScreenObj->msgLabelObj = lv_label_create(obj);
@@ -146,7 +148,7 @@ static void lv_tc_screen_constructor(const lv_obj_class_t *class_p, lv_obj_t *ob
     lv_obj_set_size(tCScreenObj->msgLabelObj, lv_pct(60), LV_SIZE_CONTENT);
 
 
-    tCScreenObj->recalibrateBtnObj = lv_btn_create(obj);
+    tCScreenObj->recalibrateBtnObj = lv_button_create(obj);
     lv_obj_set_size(tCScreenObj->recalibrateBtnObj, lv_pct(35), LV_SIZE_CONTENT);
     lv_obj_add_event_cb(tCScreenObj->recalibrateBtnObj, lv_tc_screen_recalibrate_btn_click_cb, LV_EVENT_CLICKED, obj);
     
@@ -157,7 +159,7 @@ static void lv_tc_screen_constructor(const lv_obj_class_t *class_p, lv_obj_t *ob
     lv_obj_center(recalibrateBtnLabelObj);
 
 
-    tCScreenObj->acceptBtnObj = lv_btn_create(obj);
+    tCScreenObj->acceptBtnObj = lv_button_create(obj);
     lv_obj_set_size(tCScreenObj->acceptBtnObj, lv_pct(35), LV_SIZE_CONTENT);
     lv_obj_add_event_cb(tCScreenObj->acceptBtnObj, lv_tc_screen_accept_btn_click_cb, LV_EVENT_CLICKED, obj);
 
@@ -165,19 +167,19 @@ static void lv_tc_screen_constructor(const lv_obj_class_t *class_p, lv_obj_t *ob
     lv_label_set_text_static(acceptBtnLabelObj, LV_TC_ACCEPT_TXT);
     lv_obj_center(acceptBtnLabelObj);
 
-    lv_obj_move_foreground(tCScreenObj->indicatorObj);
+    lv_obj_move_to_index(tCScreenObj->indicatorObj, -1);
 }
 
 static void lv_tc_screen_auto_set_points(lv_obj_t *screenObj) {
     //Choose the on-screen calibration points based on the active display driver's resolution
-    lv_coord_t marginH = lv_disp_get_hor_res(NULL) * 0.15;
-    lv_coord_t marginV = lv_disp_get_ver_res(NULL) * 0.15;
-    lv_coord_t margin = (marginH < marginV) ? marginH: marginV;
+    int32_t marginH = lv_display_get_horizontal_resolution(NULL) * 0.15;
+    int32_t marginV = lv_display_get_vertical_resolution(NULL) * 0.15;
+    int32_t margin = (marginH < marginV) ? marginH: marginV;
 
     lv_point_t points[3] = {
-        {       margin                            ,        (float)lv_disp_get_ver_res(NULL) * 0.3   },
-        {(float)lv_disp_get_hor_res(NULL) * 0.4   ,        lv_disp_get_ver_res(NULL) - margin},
-        {       lv_disp_get_hor_res(NULL) - margin,        margin                                   }
+        {       margin                            ,        (float)lv_display_get_vertical_resolution(NULL) * 0.3   },
+        {(float)lv_display_get_horizontal_resolution(NULL) * 0.4   ,        lv_display_get_vertical_resolution(NULL) - margin},
+        {       lv_display_get_horizontal_resolution(NULL) - margin,        margin                                   }
     };
     lv_tc_screen_set_points(screenObj, points);
 }
@@ -237,9 +239,9 @@ static void lv_tc_screen_set_indicator_pos(lv_obj_t* screenObj, lv_point_t point
     lv_obj_set_pos(tCScreenObj->indicatorObj, point.x - INDICATOR_SIZE / 2, point.y - INDICATOR_SIZE / 2);
     
     if(visible) {
-        lv_obj_clear_flag(tCScreenObj->indicatorObj, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_hidden(tCScreenObj->indicatorObj, false);
     } else {
-        lv_obj_add_flag(tCScreenObj->indicatorObj, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_hidden(tCScreenObj->indicatorObj, true);
     }
 }
 
@@ -248,8 +250,8 @@ static void lv_tc_screen_finish(lv_obj_t *screenObj) {
 
     //Update the UI
     lv_label_set_text_static(tCScreenObj->msgLabelObj, LV_TC_READY_MSG);
-    lv_obj_clear_flag(tCScreenObj->recalibrateBtnObj, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_clear_flag(tCScreenObj->acceptBtnObj, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(tCScreenObj->recalibrateBtnObj, false);
+    lv_obj_set_hidden(tCScreenObj->acceptBtnObj, false);
     
     lv_obj_align(tCScreenObj->msgLabelObj, LV_ALIGN_CENTER, 0, -50);
     lv_obj_align_to(tCScreenObj->recalibrateBtnObj, tCScreenObj->msgLabelObj, LV_ALIGN_OUT_BOTTOM_MID, 0, 20);
@@ -262,6 +264,7 @@ static void lv_tc_screen_finish(lv_obj_t *screenObj) {
     #if LV_TC_RECALIB_TIMEOUT_S
         lv_label_set_text_fmt(lv_obj_get_child(tCScreenObj->recalibrateBtnObj, 0), LV_TC_RECALIBRATE_TXT LV_TC_RECALIBRATE_TIMEOUT_FORMAT, (int)LV_TC_RECALIB_TIMEOUT_S);
 
+        tCScreenObj->recalibrateSeconds = LV_TC_RECALIB_TIMEOUT_S;
         tCScreenObj->recalibrateTimer = lv_timer_create(lv_tc_screen_recalibrate_timer, 1000, screenObj);
         lv_timer_set_repeat_count(tCScreenObj->recalibrateTimer, LV_TC_RECALIB_TIMEOUT_S);
     #endif
@@ -274,38 +277,38 @@ static void lv_tc_screen_ready(lv_obj_t *screenObj) {
     lv_tc_save_coeff();
 
     if(tCScreenObj->recalibrateTimer) {
-        lv_timer_del(tCScreenObj->recalibrateTimer);
+        lv_timer_delete(tCScreenObj->recalibrateTimer);
         tCScreenObj->recalibrateTimer = NULL;
     }
 
     //Indicate that the calibration is complete and the screen can be closed
-    lv_event_send(screenObj, LV_EVENT_READY, lv_tc_get_coeff());
+    lv_obj_send_event(screenObj, LV_EVENT_READY, lv_tc_get_coeff());
 }
 
 
 static void lv_tc_screen_recalibrate_btn_click_cb(lv_event_t *event) {
-    lv_tc_screen_start(event->user_data);
+    lv_tc_screen_start(lv_event_get_user_data(event));
 }
 
 static void lv_tc_screen_accept_btn_click_cb(lv_event_t *event) {
-    lv_tc_screen_ready(event->user_data);
+    lv_tc_screen_ready(lv_event_get_user_data(event));
 }
 
 
 static void lv_tc_screen_recalibrate_timer(lv_timer_t *timer) {
-    lv_tc_screen_t *tCScreenObj = (lv_tc_screen_t*)timer->user_data;
+    lv_tc_screen_t *tCScreenObj = (lv_tc_screen_t*)lv_timer_get_user_data(timer);
 
-    if(timer->repeat_count == 0) {
+    if(--tCScreenObj->recalibrateSeconds == 0) {
         //Restart when timed out
-        lv_tc_screen_start(tCScreenObj);
+        lv_tc_screen_start(&tCScreenObj->screenObj);
         return;
     }
-    lv_label_set_text_fmt(lv_obj_get_child(tCScreenObj->recalibrateBtnObj, 0), LV_TC_RECALIBRATE_TXT LV_TC_RECALIBRATE_TIMEOUT_FORMAT, (int)timer->repeat_count);
+    lv_label_set_text_fmt(lv_obj_get_child(tCScreenObj->recalibrateBtnObj, 0), LV_TC_RECALIBRATE_TXT LV_TC_RECALIBRATE_TIMEOUT_FORMAT, (int)tCScreenObj->recalibrateSeconds);
 }
 
 static void lv_tc_screen_start_delay_timer(lv_timer_t *timer) {
-    lv_tc_screen_t *tCScreenObj = (lv_tc_screen_t*)timer->user_data;
+    lv_tc_screen_t *tCScreenObj = (lv_tc_screen_t*)lv_timer_get_user_data(timer);
 
     lv_point_t point = {0, 0};
-    lv_tc_screen_step(tCScreenObj, STEP_FIRST, point);
+    lv_tc_screen_step(&tCScreenObj->screenObj, STEP_FIRST, point);
 }

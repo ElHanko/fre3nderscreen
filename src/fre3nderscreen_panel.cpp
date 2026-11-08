@@ -47,7 +47,7 @@ const std::map<std::string, int32_t> sleep_label_to_sec = {
 
 void style_button(lv_obj_t *button)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
@@ -59,7 +59,7 @@ void style_button(lv_obj_t *button)
 
 void style_transparent_container(lv_obj_t *obj)
 {
-  lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(obj, false);
   lv_obj_set_style_pad_all(obj, 0, 0);
   lv_obj_set_style_border_width(obj, 0, 0);
   lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
@@ -67,7 +67,7 @@ void style_transparent_container(lv_obj_t *obj)
 
 void style_card(lv_obj_t *card)
 {
-  lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(card, false);
   lv_obj_set_style_bg_color(card, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(card, 1, 0);
   lv_obj_set_style_border_color(card, lv_color_hex(COLOR_BORDER), 0);
@@ -111,9 +111,9 @@ std::vector<std::string> Fre3nderScreenPanel::log_levels = {
 };
 
 Fre3nderScreenPanel::Fre3nderScreenPanel()
-  : cont(lv_obj_create(lv_scr_act()))
+  : cont(lv_obj_create(lv_screen_active()))
   , header_cont(lv_obj_create(cont))
-  , back_btn(lv_btn_create(header_cont))
+  , back_btn(lv_button_create(header_cont))
   , title_label(lv_label_create(header_cont))
   , content_cont(lv_obj_create(cont))
   , version_card(lv_obj_create(content_cont))
@@ -122,23 +122,23 @@ Fre3nderScreenPanel::Fre3nderScreenPanel()
   , loglevel_dd(nullptr)
   , prompt_estop_toggle(nullptr)
   , z_icon_toggle(nullptr)
-  , restart_btn(lv_btn_create(content_cont))
+  , restart_btn(lv_button_create(content_cont))
   , loglevel(1)
 {
-  lv_obj_move_background(cont);
+  lv_obj_move_to_index(cont, 0);
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 8, 0);
   lv_obj_set_style_pad_row(cont, 8, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_color(cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     42,
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -274,9 +274,9 @@ Fre3nderScreenPanel::Fre3nderScreenPanel()
 
   value = conf->get_json("/prompt_emergency_stop");
   if (value.is_null() || value.template get<bool>()) {
-    lv_obj_add_state(prompt_estop_toggle, LV_STATE_CHECKED);
+    lv_obj_set_checked(prompt_estop_toggle, true);
   } else {
-    lv_obj_clear_state(prompt_estop_toggle, LV_STATE_CHECKED);
+    lv_obj_set_checked(prompt_estop_toggle, false);
   }
   lv_obj_add_event_cb(
       prompt_estop_toggle,
@@ -294,9 +294,9 @@ Fre3nderScreenPanel::Fre3nderScreenPanel()
 
   value = conf->get_json("/invert_z_icon");
   if (!value.is_null() && value.template get<bool>()) {
-    lv_obj_add_state(z_icon_toggle, LV_STATE_CHECKED);
+    lv_obj_set_checked(z_icon_toggle, true);
   } else {
-    lv_obj_clear_state(z_icon_toggle, LV_STATE_CHECKED);
+    lv_obj_set_checked(z_icon_toggle, false);
   }
   lv_obj_add_event_cb(
       z_icon_toggle,
@@ -323,24 +323,24 @@ Fre3nderScreenPanel::Fre3nderScreenPanel()
 Fre3nderScreenPanel::~Fre3nderScreenPanel()
 {
   if (cont != nullptr) {
-    lv_obj_del(cont);
+    lv_obj_delete(cont);
     cont = nullptr;
   }
 }
 
 void Fre3nderScreenPanel::foreground()
 {
-  lv_obj_move_foreground(cont);
+  lv_obj_move_to_index(cont, -1);
 }
 
 void Fre3nderScreenPanel::handle_callback(lv_event_t *event)
 {
   const lv_event_code_t code = lv_event_get_code(event);
-  lv_obj_t *obj = lv_event_get_current_target(event);
+  lv_obj_t *obj = lv_event_get_current_target_obj(event);
 
   if (code == LV_EVENT_CLICKED) {
     if (obj == back_btn) {
-      lv_obj_move_background(cont);
+      lv_obj_move_to_index(cont, 0);
       return;
     }
 

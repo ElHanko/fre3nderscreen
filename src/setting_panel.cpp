@@ -2,8 +2,8 @@
 
 #include "spdlog/spdlog.h"
 
-LV_IMG_DECLARE(network_img);
-LV_IMG_DECLARE(sysinfo_img);
+LV_IMAGE_DECLARE(network_img);
+LV_IMAGE_DECLARE(sysinfo_img);
 
 namespace {
 
@@ -20,8 +20,8 @@ lv_obj_t *create_setting_card(lv_obj_t *parent,
                               lv_event_cb_t callback,
                               void *user_data)
 {
-  lv_obj_t *button = lv_btn_create(parent);
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_t *button = lv_button_create(parent);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_pad_all(button, 12, 0);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
@@ -38,10 +38,10 @@ lv_obj_t *create_setting_card(lv_obj_t *parent,
       LV_FLEX_ALIGN_CENTER);
   lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, user_data);
 
-  lv_obj_t *icon = lv_img_create(button);
-  lv_img_set_src(icon, image);
-  lv_obj_set_style_img_recolor_opa(icon, LV_OPA_COVER, 0);
-  lv_obj_set_style_img_recolor(icon, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_t *icon = lv_image_create(button);
+  lv_image_set_src(icon, image);
+  lv_obj_set_style_image_recolor_opa(icon, LV_OPA_COVER, 0);
+  lv_obj_set_style_image_recolor(icon, lv_color_hex(COLOR_TEXT), 0);
 
   lv_obj_t *label = lv_label_create(button);
   lv_label_set_text(label, text);
@@ -63,18 +63,18 @@ SettingPanel::SettingPanel(std::mutex &lock, lv_obj_t *parent)
   , fre3nderscreen_btn(nullptr)
 {
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 12, 0);
   lv_obj_set_style_pad_row(cont, 10, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_color(cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -121,7 +121,7 @@ void SettingPanel::handle_callback(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *button = lv_event_get_current_target(event);
+  lv_obj_t *button = lv_event_get_current_target_obj(event);
 
   if (button == fre3nder_btn) {
     spdlog::trace("Fre3nder settings pressed");

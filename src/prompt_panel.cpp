@@ -24,7 +24,7 @@ void style_transparent(lv_obj_t *obj)
 
 void style_dialog(lv_obj_t *obj)
 {
-  lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(obj, false);
   lv_obj_set_style_bg_color(obj, lv_color_hex(COLOR_BG), 0);
   lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, 0);
   lv_obj_set_style_border_width(obj, 1, 0);
@@ -35,7 +35,7 @@ void style_dialog(lv_obj_t *obj)
 
 void style_button(lv_obj_t *button, const std::string &type)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_bg_opa(button, LV_OPA_COVER, 0);
   lv_obj_set_style_border_width(button, 1, 0);
@@ -82,7 +82,7 @@ PromptPanel::PromptPanel(KWebSocketClient &websocket_client,
                          lv_obj_t *parent)
   : NotifyConsumer(lock)
   , ws(websocket_client)
-  , prompt_cont(lv_obj_create(lv_scr_act()))
+  , prompt_cont(lv_obj_create(lv_screen_active()))
   , dialog_cont(lv_obj_create(prompt_cont))
   , header(lv_label_create(dialog_cont))
   , flex(lv_obj_create(dialog_cont))
@@ -92,7 +92,7 @@ PromptPanel::PromptPanel(KWebSocketClient &websocket_client,
   (void)parent;
 
   lv_obj_set_size(prompt_cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(prompt_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(prompt_cont, false);
   lv_obj_set_style_pad_all(prompt_cont, 0, 0);
   lv_obj_set_style_border_width(prompt_cont, 0, 0);
   lv_obj_set_style_radius(prompt_cont, 0, 0);
@@ -105,13 +105,13 @@ PromptPanel::PromptPanel(KWebSocketClient &websocket_client,
   lv_obj_set_style_pad_all(dialog_cont, 10, 0);
   lv_obj_set_style_pad_row(dialog_cont, 8, 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     52,
     LV_GRID_FR(1),
     62,
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -122,7 +122,7 @@ PromptPanel::PromptPanel(KWebSocketClient &websocket_client,
       LV_GRID_ALIGN_STRETCH, 0, 1,
       LV_GRID_ALIGN_CENTER, 0, 1);
   lv_label_set_text(header, "");
-  lv_label_set_long_mode(header, LV_LABEL_LONG_WRAP);
+  lv_label_set_long_mode(header, LV_LABEL_LONG_MODE_WRAP);
   lv_obj_set_width(header, LV_PCT(100));
   lv_obj_set_style_text_align(header, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_font(header, &lv_font_montserrat_20, 0);
@@ -171,7 +171,7 @@ PromptPanel::PromptPanel(KWebSocketClient &websocket_client,
 PromptPanel::~PromptPanel()
 {
   if (prompt_cont != nullptr) {
-    lv_obj_del(prompt_cont);
+    lv_obj_delete(prompt_cont);
     prompt_cont = nullptr;
   }
 
@@ -185,19 +185,19 @@ void PromptPanel::consume(json &j)
 
 void PromptPanel::foreground()
 {
-  lv_obj_clear_flag(prompt_cont, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_move_foreground(prompt_cont);
+  lv_obj_set_hidden(prompt_cont, false);
+  lv_obj_move_to_index(prompt_cont, -1);
 }
 
 void PromptPanel::background()
 {
-  lv_obj_add_flag(prompt_cont, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_move_background(prompt_cont);
+  lv_obj_set_hidden(prompt_cont, true);
+  lv_obj_move_to_index(prompt_cont, 0);
 }
 
 void PromptPanel::handle_callback(lv_event_t *event)
 {
-  lv_obj_t *button = lv_event_get_current_target(event);
+  lv_obj_t *button = lv_event_get_current_target_obj(event);
   if (button == nullptr) {
     return;
   }
@@ -257,7 +257,7 @@ void PromptPanel::handle_macro_response(json &j)
 
     lv_obj_t *text = lv_label_create(flex);
     lv_obj_set_width(text, LV_PCT(100));
-    lv_label_set_long_mode(text, LV_LABEL_LONG_WRAP);
+    lv_label_set_long_mode(text, LV_LABEL_LONG_MODE_WRAP);
     lv_obj_set_style_text_font(text, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(text, lv_color_hex(COLOR_TEXT), 0);
     lv_obj_set_style_text_align(text, LV_TEXT_ALIGN_LEFT, 0);
@@ -324,7 +324,7 @@ void PromptPanel::handle_macro_response(json &j)
           : flex;
     }
 
-    lv_obj_t *button = lv_btn_create(parent);
+    lv_obj_t *button = lv_button_create(parent);
     style_button(button, button_type);
     lv_obj_set_height(button, 48);
     lv_obj_set_style_pad_all(button, 6, 0);
@@ -340,7 +340,7 @@ void PromptPanel::handle_macro_response(json &j)
 
     lv_obj_t *label = lv_label_create(button);
     lv_label_set_text(label, button_label.c_str());
-    lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_MODE_DOTS);
     lv_obj_set_width(label, LV_PCT(100));
     lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_font(label, &lv_font_montserrat_12, 0);
@@ -349,7 +349,7 @@ void PromptPanel::handle_macro_response(json &j)
 
     lv_obj_t *command_label = lv_label_create(button);
     lv_label_set_text(command_label, button_command.c_str());
-    lv_obj_add_flag(command_label, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(command_label, true);
 
     lv_obj_add_event_cb(
         button,

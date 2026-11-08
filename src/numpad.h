@@ -16,12 +16,12 @@ class Numpad {
   void foreground_reset();
 
   static void _handle_input(lv_event_t *event) {
-    auto *panel = static_cast<Numpad *>(event->user_data);
+    auto *panel = static_cast<Numpad *>(lv_event_get_user_data(event));
     panel->handle_input(event);
   }
 
   static void _handle_back(lv_event_t *event) {
-    auto *panel = static_cast<Numpad *>(event->user_data);
+    auto *panel = static_cast<Numpad *>(lv_event_get_user_data(event));
     panel->handle_back(event);
   }
 

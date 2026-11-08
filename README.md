@@ -81,10 +81,11 @@ history and applicable copyright notices preserved. The inherited baseline is
 `0.0.26-beta`, commit `cf5c6d7539a2dca090ca71c177f57a2d96df443a`.
 Fre3nderScreen is distributed under [GNU GPL v3](LICENSE).
 
-The active submodules retain their licenses: LVGL and lv_drivers (MIT), libhv
+The active submodules retain their licenses: LVGL 9.6.0 (MIT, with LodePNG under Zlib), libhv
 (BSD-3-Clause), and spdlog (MIT). Exact revisions are recorded by Git submodules
 and the Fre3nder artifact manifest. Local touch calibration retains its source
-notices in `lv_touch_calibration/`.
+notices in `lv_touch_calibration/`. The sole LVGL patch adds an opt-in evdev
+raw mode for the existing six-coefficient affine touch calibration.
 
 The inherited `assets/dejavusans_mono_14.c` remains in use by the console. Its
 original font version and TTF cannot be reconstructed from this repository;

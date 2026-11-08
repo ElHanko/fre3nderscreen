@@ -20,7 +20,7 @@ void style_transparent(lv_obj_t *obj)
 
 void style_card(lv_obj_t *obj)
 {
-  lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(obj, false);
   lv_obj_set_style_bg_color(obj, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(obj, 1, 0);
   lv_obj_set_style_border_color(obj, lv_color_hex(COLOR_BORDER), 0);
@@ -30,7 +30,7 @@ void style_card(lv_obj_t *obj)
 
 void style_button(lv_obj_t *button)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
@@ -60,27 +60,27 @@ PowerPanel::PowerPanel(KWebSocketClient &websocket_client,
                        std::mutex &lock)
   : ws(websocket_client)
   , lv_lock(lock)
-  , cont(lv_obj_create(lv_scr_act()))
+  , cont(lv_obj_create(lv_screen_active()))
   , header_cont(lv_obj_create(cont))
-  , back_btn(lv_btn_create(header_cont))
+  , back_btn(lv_button_create(header_cont))
   , title_label(lv_label_create(header_cont))
   , devices_cont(lv_obj_create(cont))
   , empty_label(lv_label_create(devices_cont))
 {
-  lv_obj_move_background(cont);
+  lv_obj_move_to_index(cont, 0);
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 8, 0);
   lv_obj_set_style_pad_row(cont, 6, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_color(cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     42,
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -91,7 +91,7 @@ PowerPanel::PowerPanel(KWebSocketClient &websocket_client,
       LV_GRID_ALIGN_STRETCH, 0, 1,
       LV_GRID_ALIGN_STRETCH, 0, 1);
   style_transparent(header_cont);
-  lv_obj_clear_flag(header_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(header_cont, false);
 
   style_button(back_btn);
   lv_obj_set_size(back_btn, 40, 34);
@@ -136,7 +136,7 @@ PowerPanel::PowerPanel(KWebSocketClient &websocket_client,
 PowerPanel::~PowerPanel()
 {
   if (cont != nullptr) {
-    lv_obj_del(cont);
+    lv_obj_delete(cont);
     cont = nullptr;
   }
 
@@ -151,7 +151,7 @@ void PowerPanel::create_device(json &j)
   auto entry = devices.find(name);
 
   if (entry == devices.end()) {
-    lv_obj_add_flag(empty_label, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(empty_label, true);
 
     lv_obj_t *device_cont = lv_obj_create(devices_cont);
     lv_obj_set_width(device_cont, LV_PCT(100));
@@ -187,9 +187,9 @@ void PowerPanel::create_device(json &j)
       status);
 
   if (status == "on") {
-    lv_obj_add_state(power_device_toggle, LV_STATE_CHECKED);
+    lv_obj_set_checked(power_device_toggle, true);
   } else {
-    lv_obj_clear_state(power_device_toggle, LV_STATE_CHECKED);
+    lv_obj_set_checked(power_device_toggle, false);
   }
 }
 
@@ -235,16 +235,16 @@ void PowerPanel::handle_device_callback(json &j)
         new_status);
 
     if (new_status == "on") {
-      lv_obj_add_state(entry->second, LV_STATE_CHECKED);
+      lv_obj_set_checked(entry->second, true);
     } else {
-      lv_obj_clear_state(entry->second, LV_STATE_CHECKED);
+      lv_obj_set_checked(entry->second, false);
     }
   }
 }
 
 void PowerPanel::foreground()
 {
-  lv_obj_move_foreground(cont);
+  lv_obj_move_to_index(cont, -1);
 
   json params;
   for (auto &device : devices) {
@@ -264,9 +264,9 @@ void PowerPanel::handle_callback(lv_event_t *event)
   const lv_event_code_t code = lv_event_get_code(event);
 
   if (code == LV_EVENT_CLICKED) {
-    lv_obj_t *button = lv_event_get_current_target(event);
+    lv_obj_t *button = lv_event_get_current_target_obj(event);
     if (button == back_btn) {
-      lv_obj_move_background(cont);
+      lv_obj_move_to_index(cont, 0);
     }
     return;
   }
@@ -275,7 +275,7 @@ void PowerPanel::handle_callback(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *obj = lv_event_get_target(event);
+  lv_obj_t *obj = lv_event_get_target_obj(event);
   for (auto &device : devices) {
     if (obj != device.second) {
       continue;

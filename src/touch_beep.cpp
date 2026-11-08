@@ -54,7 +54,7 @@ void stop_tone(lv_timer_t *timer) {
         stop_timer = nullptr;
     }
 
-    lv_timer_del(timer);
+    lv_timer_delete(timer);
 }
 
 #endif
@@ -89,7 +89,7 @@ void init(const char *input_path) {
 void shutdown() {
 #ifndef SIMULATOR
     if (stop_timer != nullptr) {
-        lv_timer_del(stop_timer);
+        lv_timer_delete(stop_timer);
         stop_timer = nullptr;
     }
 
@@ -101,7 +101,8 @@ void shutdown() {
 #endif
 }
 
-void feedback_cb(lv_indev_drv_t * /*drv*/, uint8_t event_code) {
+void feedback_cb(lv_event_t *event) {
+    const lv_event_code_t event_code = lv_event_get_code(event);
 #ifndef SIMULATOR
     if (beeper_fd < 0 || event_code != LV_EVENT_CLICKED) {
         return;
@@ -115,7 +116,7 @@ void feedback_cb(lv_indev_drv_t * /*drv*/, uint8_t event_code) {
     last_click_tick = now;
 
     if (stop_timer != nullptr) {
-        lv_timer_del(stop_timer);
+        lv_timer_delete(stop_timer);
         stop_timer = nullptr;
         (void)write_tone(0);
     }

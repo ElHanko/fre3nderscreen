@@ -15,7 +15,7 @@ constexpr uint32_t COLOR_TEXT = 0xFFFFFF;
 
 void style_button(lv_obj_t *button)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
@@ -27,7 +27,7 @@ void style_button(lv_obj_t *button)
 
 void style_card(lv_obj_t *card)
 {
-  lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(card, false);
   lv_obj_set_style_bg_color(card, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(card, 1, 0);
   lv_obj_set_style_border_color(card, lv_color_hex(COLOR_BORDER), 0);
@@ -46,9 +46,9 @@ void style_transparent(lv_obj_t *obj)
 
 MacrosPanel::MacrosPanel(KWebSocketClient &client)
   : ws(client)
-  , cont(lv_obj_create(lv_scr_act()))
+  , cont(lv_obj_create(lv_screen_active()))
   , header_cont(lv_obj_create(cont))
-  , back_btn(lv_btn_create(header_cont))
+  , back_btn(lv_button_create(header_cont))
   , title_label(lv_label_create(header_cont))
   , content_cont(lv_obj_create(cont))
   , controls_card(lv_obj_create(content_cont))
@@ -56,20 +56,20 @@ MacrosPanel::MacrosPanel(KWebSocketClient &client)
   , top_cont(lv_obj_create(content_cont))
   , kb(lv_keyboard_create(content_cont))
 {
-  lv_obj_move_background(cont);
+  lv_obj_move_to_index(cont, 0);
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 8, 0);
   lv_obj_set_style_pad_row(cont, 8, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_color(cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     42,
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -80,7 +80,7 @@ MacrosPanel::MacrosPanel(KWebSocketClient &client)
       LV_GRID_ALIGN_STRETCH, 0, 1,
       LV_GRID_ALIGN_STRETCH, 0, 1);
   style_transparent(header_cont);
-  lv_obj_clear_flag(header_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(header_cont, false);
 
   style_button(back_btn);
   lv_obj_set_size(back_btn, 40, 34);
@@ -107,7 +107,7 @@ MacrosPanel::MacrosPanel(KWebSocketClient &client)
       LV_GRID_ALIGN_STRETCH, 0, 1,
       LV_GRID_ALIGN_STRETCH, 1, 1);
   style_transparent(content_cont);
-  lv_obj_clear_flag(content_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(content_cont, false);
   lv_obj_set_style_pad_row(content_cont, 8, 0);
   lv_obj_set_flex_flow(content_cont, LV_FLEX_FLOW_COLUMN);
   lv_obj_set_flex_align(
@@ -151,7 +151,7 @@ MacrosPanel::MacrosPanel(KWebSocketClient &client)
   lv_obj_set_scroll_dir(top_cont, LV_DIR_VER);
   lv_obj_set_scrollbar_mode(top_cont, LV_SCROLLBAR_MODE_AUTO);
 
-  lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(kb, true);
   lv_obj_set_width(kb, LV_PCT(100));
   lv_obj_set_height(kb, 180);
   lv_obj_set_style_text_font(kb, &lv_font_montserrat_16, LV_STATE_DEFAULT);
@@ -160,16 +160,16 @@ MacrosPanel::MacrosPanel(KWebSocketClient &client)
 MacrosPanel::~MacrosPanel()
 {
   if (cont != nullptr) {
-    lv_obj_del(cont);
+    lv_obj_delete(cont);
     cont = nullptr;
   }
 }
 
 void MacrosPanel::foreground()
 {
-  lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(kb, true);
   lv_keyboard_set_textarea(kb, nullptr);
-  lv_obj_move_foreground(cont);
+  lv_obj_move_to_index(cont, -1);
 }
 
 void MacrosPanel::populate()
@@ -207,12 +207,12 @@ void MacrosPanel::populate()
 void MacrosPanel::handle_callback(lv_event_t *event)
 {
   const lv_event_code_t code = lv_event_get_code(event);
-  lv_obj_t *obj = lv_event_get_current_target(event);
+  lv_obj_t *obj = lv_event_get_current_target_obj(event);
 
   if (code == LV_EVENT_CLICKED && obj == back_btn) {
-    lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(kb, true);
     lv_keyboard_set_textarea(kb, nullptr);
-    lv_obj_move_background(cont);
+    lv_obj_move_to_index(cont, 0);
     return;
   }
 

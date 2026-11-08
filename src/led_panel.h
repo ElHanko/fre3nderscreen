@@ -23,17 +23,17 @@ class LedPanel : public NotifyConsumer {
   void handle_led_update_generic(lv_event_t *event);
 
   static void _handle_callback(lv_event_t *event) {
-    auto *panel = static_cast<LedPanel *>(event->user_data);
+    auto *panel = static_cast<LedPanel *>(lv_event_get_user_data(event));
     panel->handle_callback(event);
   }
 
   static void _handle_led_update(lv_event_t *event) {
-    auto *panel = static_cast<LedPanel *>(event->user_data);
+    auto *panel = static_cast<LedPanel *>(lv_event_get_user_data(event));
     panel->handle_led_update(event);
   }
 
   static void _handle_led_update_generic(lv_event_t *event) {
-    auto *panel = static_cast<LedPanel *>(event->user_data);
+    auto *panel = static_cast<LedPanel *>(lv_event_get_user_data(event));
     panel->handle_led_update_generic(event);
   }
 

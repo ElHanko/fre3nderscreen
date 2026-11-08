@@ -16,7 +16,7 @@ constexpr uint32_t COLOR_MUTED = 0xB8C0C5;
 
 void style_transparent(lv_obj_t *obj)
 {
-  lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(obj, false);
   lv_obj_set_style_pad_all(obj, 0, 0);
   lv_obj_set_style_border_width(obj, 0, 0);
   lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
@@ -24,7 +24,7 @@ void style_transparent(lv_obj_t *obj)
 
 void style_button(lv_obj_t *button)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD_PRESSED), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
@@ -38,7 +38,7 @@ void style_button(lv_obj_t *button)
 
 void style_card(lv_obj_t *card)
 {
-  lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(card, false);
   lv_obj_set_style_bg_color(card, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(card, 1, 0);
   lv_obj_set_style_border_color(card, lv_color_hex(COLOR_BORDER), 0);
@@ -103,7 +103,7 @@ lv_obj_t *create_limit_card(lv_obj_t *parent,
       LV_FLEX_ALIGN_CENTER,
       LV_FLEX_ALIGN_CENTER);
 
-  *reset_btn = lv_btn_create(controls);
+  *reset_btn = lv_button_create(controls);
   style_button(*reset_btn);
   lv_obj_set_size(*reset_btn, 58, 32);
   lv_obj_add_event_cb(
@@ -153,9 +153,9 @@ LimitsPanel::LimitsPanel(KWebSocketClient &client,
                          std::mutex &lock)
   : NotifyConsumer(lock)
   , ws(client)
-  , cont(lv_obj_create(lv_scr_act()))
+  , cont(lv_obj_create(lv_screen_active()))
   , header_cont(lv_obj_create(cont))
-  , back_btn(lv_btn_create(header_cont))
+  , back_btn(lv_button_create(header_cont))
   , title_label(lv_label_create(header_cont))
   , content_cont(lv_obj_create(cont))
   , velocity_card(nullptr)
@@ -179,20 +179,20 @@ LimitsPanel::LimitsPanel(KWebSocketClient &client,
   , max_accel_to_decel_default(10000)
   , square_corner_default(5)
 {
-  lv_obj_move_background(cont);
+  lv_obj_move_to_index(cont, 0);
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 8, 0);
   lv_obj_set_style_pad_row(cont, 8, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_color(cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t root_rows[] = {
+  static int32_t root_rows[] = {
     42,
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t root_cols[] = {
+  static int32_t root_cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -283,7 +283,7 @@ LimitsPanel::LimitsPanel(KWebSocketClient &client,
 LimitsPanel::~LimitsPanel()
 {
   if (cont != nullptr) {
-    lv_obj_del(cont);
+    lv_obj_delete(cont);
     cont = nullptr;
   }
 }
@@ -367,7 +367,7 @@ void LimitsPanel::init(json &j)
 
 void LimitsPanel::foreground()
 {
-  lv_obj_move_foreground(cont);
+  lv_obj_move_to_index(cont, -1);
 }
 
 void LimitsPanel::consume(json &j)
@@ -416,10 +416,10 @@ void LimitsPanel::consume(json &j)
 void LimitsPanel::handle_callback(lv_event_t *event)
 {
   const lv_event_code_t code = lv_event_get_code(event);
-  lv_obj_t *target = lv_event_get_current_target(event);
+  lv_obj_t *target = lv_event_get_current_target_obj(event);
 
   if (code == LV_EVENT_CLICKED && target == back_btn) {
-    lv_obj_move_background(cont);
+    lv_obj_move_to_index(cont, 0);
     return;
   }
 

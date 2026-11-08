@@ -74,12 +74,14 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_LV_TC_IND
   0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 };
 
-const lv_img_dsc_t lv_tc_indicator_img = {
-  .header.cf = LV_IMG_CF_ALPHA_2BIT,
-  .header.always_zero = 0,
-  .header.reserved = 0,
-  .header.w = 50,
-  .header.h = 50,
-  .data_size = 650,
+const lv_image_dsc_t lv_tc_indicator_img = {
+  .header = {
+    .magic = LV_IMAGE_HEADER_MAGIC,
+    .cf = LV_COLOR_FORMAT_A2,
+    .w = 50,
+    .h = 50,
+    .stride = 13,
+  },
+  .data_size = sizeof(lv_tc_indicator_img_map),
   .data = lv_tc_indicator_img_map,
 };

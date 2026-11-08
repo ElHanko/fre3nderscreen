@@ -21,17 +21,17 @@ class HomingPanel : public NotifyConsumer {
   void handle_emergency_prompt(lv_event_t *event);
 
   static void _handle_callback(lv_event_t *event) {
-    auto *panel = static_cast<HomingPanel *>(event->user_data);
+    auto *panel = static_cast<HomingPanel *>(lv_event_get_user_data(event));
     panel->handle_callback(event);
   }
 
   static void _handle_distance_cb(lv_event_t *event) {
-    auto *panel = static_cast<HomingPanel *>(event->user_data);
+    auto *panel = static_cast<HomingPanel *>(lv_event_get_user_data(event));
     panel->handle_distance_cb(event);
   }
 
   static void _handle_emergency_prompt(lv_event_t *event) {
-    auto *panel = static_cast<HomingPanel *>(event->user_data);
+    auto *panel = static_cast<HomingPanel *>(lv_event_get_user_data(event));
     panel->handle_emergency_prompt(event);
   }
 

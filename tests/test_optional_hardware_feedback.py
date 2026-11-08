@@ -9,7 +9,7 @@ screen = (root / "src" / "fre3nderscreen.cpp").read_text()
 beep = (root / "src" / "touch_beep.cpp").read_text()
 
 assert "FRE3NDERSCREEN_BEEPER_INPUT" in main
-assert "indev_drv_1.feedback_cb = TouchBeep::feedback_cb;" in main
+assert "lv_indev_add_event_cb(touch, TouchBeep::feedback_cb, LV_EVENT_CLICKED, nullptr)" in main
 
 assert "EV_SND" in beep
 assert "SND_TONE" in beep
@@ -29,20 +29,26 @@ assert "std::strtol(display_sleep_override, &end, 10)" in screen
 assert "FRE3NDERSCREEN_BACKLIGHT_POWER" in screen
 assert "set_backlight_power(backlight_power, '4')" in screen
 assert "set_backlight_power(backlight_power, '0')" in screen
-assert "LV_OBJ_FLAG_CLICKABLE" in screen
+assert "lv_obj_set_clickable(screen_saver, true)" in screen
 
 print("optional hardware feedback checks passed")
 
 vt = (root / "src/virtual_terminal.cpp").read_text()
-assert "VirtualTerminal::flush" in main
+assert "VirtualTerminal::attach_display" in main
 for interface in ("VT_SETMODE", "VT_RELDISP", "VT_ACTIVATE", "VT_WAITACTIVE", "KD_GRAPHICS", "KD_TEXT", "TIOCSCTTY"):
     assert interface in vt
-assert "if (active) fbdev_flush" in vt
-assert "else lv_disp_flush_ready" in vt
+assert "if (active) framebuffer_flush" in vt
+assert "else lv_display_flush_ready" in vt
 assert "active = false; // No framebuffer writes" in vt
+assert "lv_display_get_flush_cb(display)" in vt
+assert "lv_display_set_flush_cb(display, flush)" in vt
+for interface in ("FBIOBLANK", "FBIOGET_VSCREENINFO", "FBIOPAN_DISPLAY"):
+    assert interface in vt
+assert "info.xoffset = 0" in vt
+assert "info.yoffset = 0" in vt
 assert "lv_indev_enable(touch, false)" in screen
-assert "evdev_read(touch->driver, &ignored)" in screen
-assert "lv_obj_invalidate(lv_scr_act())" in screen
+assert "lv_tc_indev_read_raw(touch, &ignored)" in screen
+assert "lv_obj_invalidate(lv_screen_active())" in screen
 assert "vt_active && display_sleep != -1" in screen
 assert "VirtualTerminal::activate();" in screen
 assert screen.index("VirtualTerminal::activate();") < screen.index("std::ofstream(ready_file)")

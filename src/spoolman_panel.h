@@ -23,12 +23,12 @@ class SpoolmanPanel {
   void handle_spoolman_action(lv_event_t *event);
 
   static void _handle_callback(lv_event_t *event) {
-    SpoolmanPanel *panel = (SpoolmanPanel*)event->user_data;
+    SpoolmanPanel *panel = (SpoolmanPanel*)lv_event_get_user_data(event);
     panel->handle_callback(event);
   };
   
   static void _handle_spoolman_action(lv_event_t *event) {
-    SpoolmanPanel *panel = (SpoolmanPanel*)event->user_data;
+    SpoolmanPanel *panel = (SpoolmanPanel*)lv_event_get_user_data(event);
     panel->handle_spoolman_action(event);
   };
 

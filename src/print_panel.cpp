@@ -23,8 +23,8 @@ lv_obj_t *create_text_button(lv_obj_t *parent,
                              lv_event_cb_t callback,
                              void *user_data)
 {
-  lv_obj_t *button = lv_btn_create(parent);
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_t *button = lv_button_create(parent);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
@@ -84,20 +84,20 @@ PrintPanel::PrintPanel(KWebSocketClient &websocket,
   spdlog::trace("building Fre3nder files panel");
 
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 8, 0);
   lv_obj_set_style_pad_row(cont, 8, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_color(cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     38,
     LV_GRID_FR(1),
     126,
     42,
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -107,7 +107,7 @@ PrintPanel::PrintPanel(KWebSocketClient &websocket,
       toolbar,
       LV_GRID_ALIGN_STRETCH, 0, 1,
       LV_GRID_ALIGN_STRETCH, 0, 1);
-  lv_obj_clear_flag(toolbar, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(toolbar, false);
   lv_obj_set_style_pad_all(toolbar, 0, 0);
   lv_obj_set_style_pad_column(toolbar, 6, 0);
   lv_obj_set_style_border_width(toolbar, 0, 0);
@@ -134,8 +134,8 @@ PrintPanel::PrintPanel(KWebSocketClient &websocket,
       file_table,
       LV_GRID_ALIGN_STRETCH, 0, 1,
       LV_GRID_ALIGN_STRETCH, 1, 1);
-  lv_table_set_col_cnt(file_table, 1);
-  lv_table_set_col_width(file_table, 0, LV_PCT(100));
+  lv_table_set_column_count(file_table, 1);
+  lv_table_set_column_width(file_table, 0, LV_PCT(100));
   lv_obj_set_scroll_dir(file_table, LV_DIR_VER);
   lv_obj_add_event_cb(file_table, &PrintPanel::_handle_file_table, LV_EVENT_VALUE_CHANGED, this);
   lv_obj_set_style_bg_color(file_table, lv_color_hex(COLOR_CARD), LV_PART_MAIN);
@@ -151,7 +151,7 @@ PrintPanel::PrintPanel(KWebSocketClient &websocket,
       detail_cont,
       LV_GRID_ALIGN_STRETCH, 0, 1,
       LV_GRID_ALIGN_STRETCH, 2, 1);
-  lv_obj_clear_flag(detail_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(detail_cont, false);
   lv_obj_set_style_pad_all(detail_cont, 0, 0);
   lv_obj_set_style_border_width(detail_cont, 0, 0);
   lv_obj_set_style_bg_opa(detail_cont, LV_OPA_TRANSP, 0);
@@ -160,7 +160,7 @@ PrintPanel::PrintPanel(KWebSocketClient &websocket,
       action_cont,
       LV_GRID_ALIGN_STRETCH, 0, 1,
       LV_GRID_ALIGN_STRETCH, 3, 1);
-  lv_obj_clear_flag(action_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(action_cont, false);
   lv_obj_set_style_pad_all(action_cont, 0, 0);
   lv_obj_set_style_pad_column(action_cont, 8, 0);
   lv_obj_set_style_border_width(action_cont, 0, 0);
@@ -244,8 +244,8 @@ void PrintPanel::handle_file_table(lv_event_t *event)
     return;
   }
 
-  uint16_t row = LV_TABLE_CELL_NONE;
-  uint16_t col = LV_TABLE_CELL_NONE;
+  uint32_t row = LV_TABLE_CELL_NONE;
+  uint32_t col = LV_TABLE_CELL_NONE;
   lv_table_get_selected_cell(file_table, &row, &col);
 
   if (row == LV_TABLE_CELL_NONE ||
@@ -281,7 +281,7 @@ void PrintPanel::handle_toolbar(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *button = lv_event_get_current_target(event);
+  lv_obj_t *button = lv_event_get_current_target_obj(event);
 
   if (button == refresh_btn) {
     subscribe();
@@ -387,7 +387,7 @@ void PrintPanel::show_dir()
     row_entries.push_back(entry);
   }
 
-  lv_table_set_row_cnt(file_table, row);
+  lv_table_set_row_count(file_table, row);
   lv_obj_scroll_to_y(file_table, 0, LV_ANIM_OFF);
 
   update_sort_style();
@@ -434,15 +434,15 @@ void PrintPanel::refresh_print_state()
 void PrintPanel::update_action_states()
 {
   if (print_active) {
-    lv_obj_clear_state(status_btn, LV_STATE_DISABLED);
+    lv_obj_set_disabled(status_btn, false);
   } else {
-    lv_obj_add_state(status_btn, LV_STATE_DISABLED);
+    lv_obj_set_disabled(status_btn, true);
   }
 
   if (cur_file != nullptr && !print_active) {
-    lv_obj_clear_state(print_btn, LV_STATE_DISABLED);
+    lv_obj_set_disabled(print_btn, false);
   } else {
-    lv_obj_add_state(print_btn, LV_STATE_DISABLED);
+    lv_obj_set_disabled(print_btn, true);
   }
 }
 

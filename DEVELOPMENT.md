@@ -27,7 +27,8 @@ Configured Load/Unload commands are enabled from `printer.gcode.help` results.
 No Guppy filament parameters are injected. Keep the existing `default_macros`
 configuration keys; they are also used by the package recipe.
 
-LVGL, lv_drivers, libhv and spdlog are active submodules. The Makefile compiles
+LVGL 9.6.0, libhv 1.3.4 and spdlog 1.17.0 are active submodules. The Makefile
+builds LVGL through its upstream static CMake target and compiles
 all `src/*.cpp`, `assets/*.c` and `assets/material_46/*.c`, plus touch calibration
 for target builds. Deleting an unused `.cpp` removes its build inclusion. Assets
 are referenced as LVGL symbols; themes are selected as `<theme>.json` at runtime.
@@ -47,9 +48,23 @@ The application Makefile accepts:
 - `CROSS_COMPILE`: target compiler prefix; unset selects the SDL simulator.
 - `FRE3NDERSCREEN_VERSION`: version displayed in the UI; otherwise `dev-snapshot`.
 
-The target uses `LV_DISP_ROT_90` and touch calibration. The SDL simulator runs
-at 272×480 using development-only Moonraker and Management mocks. The dependency
-patches in `patches/` remain required by the production cross-builder.
+The native Linux-fbdev display is 480×272 XRGB8888, rotated with
+`LV_DISPLAY_ROTATION_90` to the logical 272×480 UI. Native evdev retains the
+six affine touch coefficients and their inverse rotation. The only remaining
+dependency patch, `patches/0001-lvgl-evdev-raw-mode.patch`, adds an opt-in raw
+coordinate mode before evdev scaling/clamping; the production builder applies it.
+VT ownership gates the native flush callback. Local framebuffer IOCTLs retain
+blanking and pan reset; backlight and beeper paths still come from Fre3nder.
+The SDL simulator uses LVGL's integrated software backend and native mouse,
+keyboard and mousewheel at 272×480 with development-only API mocks.
+
+The LVGL 9.6 source migration has not been built or hardware-qualified. The
+combined build still needs to validate CMake configuration, SDL integration,
+static MIPS linking and ABI. Compare all pages, dialogs, Bed Mesh/Spoolman table
+colors, chart history, icons, DejaVu text and PNG thumbnails in SDL. On hardware,
+check colors/rotation, existing and new affine calibration at the corners,
+standby/wake, click feedback and VT handoff without framebuffer writes or stale
+touch actions. Measure RAM/CPU use rather than assuming a performance change.
 
 The normal visual validation command, **only after explicit build approval**:
 

@@ -10,24 +10,24 @@ ButtonContainer::ButtonContainer(lv_obj_t *parent,
 				 const std::string &prompt,
 				 const std::function<void()> &pcb)
   : btn_cont(lv_obj_create(parent))
-  , btn(lv_imgbtn_create(btn_cont))
+  , btn(lv_imagebutton_create(btn_cont))
   , label(lv_label_create(btn_cont))
   , prompt_text(prompt)
   , prompt_callback(pcb)
 {
   lv_obj_set_style_pad_all(btn_cont, 0, 0);
-  auto width_scale = (double)lv_disp_get_physical_hor_res(NULL) / 800.0;
+  auto width_scale = (double)lv_display_get_physical_horizontal_resolution(NULL) / 800.0;
   lv_obj_set_size(btn_cont, 150 * width_scale, LV_SIZE_CONTENT);
 
-  lv_obj_clear_flag(btn_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(btn_cont, false);
   // lv_obj_add_style(btn_cont, &style, LV_PART_MAIN);
-  lv_imgbtn_set_src(btn, LV_IMGBTN_STATE_RELEASED, NULL, btn_img, NULL);
+  lv_imagebutton_set_src(btn, LV_IMAGEBUTTON_STATE_RELEASED, NULL, btn_img, NULL);
   lv_obj_set_width(btn, LV_SIZE_CONTENT);
   // lv_obj_align(btn, LV_ALIGN_CENTER, 0, 0);
   lv_obj_align(btn, LV_ALIGN_TOP_MID, 0, 0);
 
-  lv_obj_add_flag(btn, LV_OBJ_FLAG_EVENT_BUBBLE);
-  // lv_obj_add_flag(btn_cont, LV_OBJ_FLAG_EVENT_BUBBLE);
+  lv_obj_set_event_bubble(btn, true);
+  // lv_obj_set_event_bubble(btn_cont, true);
 
   Config *conf = Config::get_instance();
   auto estop = conf->get_json("/prompt_emergency_stop");
@@ -44,7 +44,7 @@ ButtonContainer::ButtonContainer(lv_obj_t *parent,
       lv_obj_add_event_cb(btn_cont, [](lv_event_t *e) {
 	lv_event_code_t code = lv_event_get_code(e);
 	if (code == LV_EVENT_CLICKED) {
-	  ((ButtonContainer*)e->user_data)->handle_prompt();
+	  ((ButtonContainer*)lv_event_get_user_data(e))->handle_prompt();
 	}
       }, LV_EVENT_CLICKED, this);
     } else {
@@ -73,63 +73,53 @@ lv_obj_t *ButtonContainer::get_container() {
 }
 
 void ButtonContainer::disable() {
-  lv_obj_add_state(btn, LV_STATE_DISABLED);
-  lv_obj_add_state(btn_cont, LV_STATE_DISABLED);
-  lv_obj_add_state(label, LV_STATE_DISABLED);
+  lv_obj_set_disabled(btn, true);
+  lv_obj_set_disabled(btn_cont, true);
+  lv_obj_set_disabled(label, true);
   
 }
 
 void ButtonContainer::enable() {
-  lv_obj_clear_state(btn, LV_STATE_DISABLED);
-  lv_obj_clear_state(btn_cont, LV_STATE_DISABLED);
-  lv_obj_clear_state(label, LV_STATE_DISABLED);
+  lv_obj_set_disabled(btn, false);
+  lv_obj_set_disabled(btn_cont, false);
+  lv_obj_set_disabled(label, false);
 }
 
 void ButtonContainer::hide() {
-  lv_obj_add_flag(btn_cont, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(btn_cont, true);
 }
 
 void ButtonContainer::handle_callback(lv_event_t *e) {
   const lv_event_code_t code = lv_event_get_code(e);
   if (code == LV_EVENT_PRESSED) {
-    lv_imgbtn_set_state(btn, LV_IMGBTN_STATE_PRESSED);
+    lv_imagebutton_set_state(btn, LV_IMAGEBUTTON_STATE_PRESSED);
   } else if (code == LV_EVENT_RELEASED) {
-    lv_imgbtn_set_state(btn, LV_IMGBTN_STATE_RELEASED);
+    lv_imagebutton_set_state(btn, LV_IMAGEBUTTON_STATE_RELEASED);
   }
 }
 
 void ButtonContainer::handle_prompt() {
-  static const char * btns[] = {"Confirm", "Cancel", ""};
+  lv_obj_t *mbox = lv_msgbox_create(nullptr);
+  lv_obj_t *msg = lv_msgbox_add_text(mbox, prompt_text.c_str());
+  lv_obj_set_style_text_align(msg, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_width(msg, lv_pct(100));
 
-  lv_obj_t *mbox1 = lv_msgbox_create(NULL, NULL, prompt_text.c_str(), btns, false);
-  lv_obj_t *msg = ((lv_msgbox_t*)mbox1)->text;
-  lv_obj_set_style_text_align(msg, LV_TEXT_ALIGN_CENTER, 0);  
-  lv_obj_set_width(msg, LV_PCT(100));
-  lv_obj_center(msg);
-  
-  lv_obj_t *btnm = lv_msgbox_get_btns(mbox1);
-  lv_btnmatrix_set_btn_ctrl(btnm, 0, LV_BTNMATRIX_CTRL_CHECKED);
-  lv_btnmatrix_set_btn_ctrl(btnm, 1, LV_BTNMATRIX_CTRL_CHECKED);
-  lv_obj_add_flag(btnm, LV_OBJ_FLAG_FLOATING);
-  lv_obj_align(btnm, LV_ALIGN_BOTTOM_MID, 0, 0);
-  
-  auto hscale = (double)lv_disp_get_physical_ver_res(NULL) / 480.0;
+  lv_obj_t *confirm = lv_msgbox_add_footer_button(mbox, "Confirm");
+  lv_obj_t *cancel = lv_msgbox_add_footer_button(mbox, "Cancel");
+  lv_obj_t *footer = lv_msgbox_get_footer(mbox);
+  auto hscale = (double)lv_display_get_physical_vertical_resolution(nullptr) / 480.0;
+  lv_obj_set_size(footer, lv_pct(90), 50 * hscale);
+  lv_obj_set_size(mbox, lv_pct(50), lv_pct(35));
 
-  lv_obj_set_size(btnm, LV_PCT(90), 50 *hscale);
-  lv_obj_set_size(mbox1, LV_PCT(50), LV_PCT(35));
-
-  lv_obj_add_event_cb(mbox1, [](lv_event_t *e) {
-    lv_obj_t *obj = lv_obj_get_parent(lv_event_get_target(e));
-    uint32_t clicked_btn = lv_msgbox_get_active_btn(obj);
-    if(clicked_btn == 0) {
-      ((ButtonContainer*)e->user_data)->run_callback();
-    }
-    
-    lv_msgbox_close(obj);
-
-  }, LV_EVENT_VALUE_CHANGED, this);
-
-  lv_obj_center(mbox1);
+  lv_obj_add_event_cb(confirm, [](lv_event_t *e) {
+    lv_obj_t *box = lv_obj_get_parent(lv_obj_get_parent(lv_event_get_target_obj(e)));
+    static_cast<ButtonContainer *>(lv_event_get_user_data(e))->run_callback();
+    lv_msgbox_close(box);
+  }, LV_EVENT_CLICKED, this);
+  lv_obj_add_event_cb(cancel, [](lv_event_t *e) {
+    lv_msgbox_close(static_cast<lv_obj_t *>(lv_event_get_user_data(e)));
+  }, LV_EVENT_CLICKED, mbox);
+  lv_obj_center(mbox);
 }
 
 void ButtonContainer::run_callback() {

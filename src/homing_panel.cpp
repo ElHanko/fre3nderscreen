@@ -4,15 +4,15 @@
 #include "state.h"
 #include "spdlog/spdlog.h"
 
-LV_IMG_DECLARE(arrow_left);
-LV_IMG_DECLARE(arrow_up);
-LV_IMG_DECLARE(arrow_right);
-LV_IMG_DECLARE(arrow_down);
-LV_IMG_DECLARE(home);
-LV_IMG_DECLARE(z_closer);
-LV_IMG_DECLARE(z_farther);
-LV_IMG_DECLARE(emergency);
-LV_IMG_DECLARE(motor_off_img);
+LV_IMAGE_DECLARE(arrow_left);
+LV_IMAGE_DECLARE(arrow_up);
+LV_IMAGE_DECLARE(arrow_right);
+LV_IMAGE_DECLARE(arrow_down);
+LV_IMAGE_DECLARE(home);
+LV_IMAGE_DECLARE(z_closer);
+LV_IMAGE_DECLARE(z_farther);
+LV_IMAGE_DECLARE(emergency);
+LV_IMAGE_DECLARE(motor_off_img);
 
 namespace {
 
@@ -31,7 +31,7 @@ static const char *distance_map[] = {
 
 void style_button(lv_obj_t *button, bool danger = false)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(
@@ -56,7 +56,7 @@ lv_obj_t *create_action_button(lv_obj_t *parent,
                                bool danger = false,
                                lv_obj_t **icon_out = nullptr)
 {
-  lv_obj_t *button = lv_btn_create(parent);
+  lv_obj_t *button = lv_button_create(parent);
   style_button(button, danger);
   lv_obj_set_style_pad_all(button, 6, 0);
   lv_obj_set_flex_flow(button, LV_FLEX_FLOW_COLUMN);
@@ -67,12 +67,12 @@ lv_obj_t *create_action_button(lv_obj_t *parent,
       LV_FLEX_ALIGN_CENTER);
   lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, user_data);
 
-  lv_obj_t *icon = lv_img_create(button);
-  lv_img_set_src(icon, image);
-  lv_img_set_zoom(icon, 128);
+  lv_obj_t *icon = lv_image_create(button);
+  lv_image_set_src(icon, image);
+  lv_image_set_scale(icon, 128);
   lv_obj_set_style_translate_y(icon, -6, 0);
-  lv_obj_set_style_img_recolor_opa(icon, LV_OPA_COVER, 0);
-  lv_obj_set_style_img_recolor(
+  lv_obj_set_style_image_recolor_opa(icon, LV_OPA_COVER, 0);
+  lv_obj_set_style_image_recolor(
       icon,
       lv_color_hex(danger ? COLOR_DANGER : COLOR_TEXT),
       0);
@@ -97,7 +97,7 @@ lv_obj_t *create_action_button(lv_obj_t *parent,
 
 void style_transparent_container(lv_obj_t *cont)
 {
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 0, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
@@ -108,9 +108,9 @@ void style_transparent_container(lv_obj_t *cont)
 HomingPanel::HomingPanel(KWebSocketClient &websocket_client, std::mutex &lock)
   : NotifyConsumer(lock)
   , ws(websocket_client)
-  , homing_cont(lv_obj_create(lv_scr_act()))
+  , homing_cont(lv_obj_create(lv_screen_active()))
   , header_cont(lv_obj_create(homing_cont))
-  , back_btn(lv_btn_create(header_cont))
+  , back_btn(lv_button_create(header_cont))
   , title_label(lv_label_create(header_cont))
   , home_all_btn(nullptr)
   , home_xy_btn(nullptr)
@@ -131,13 +131,13 @@ HomingPanel::HomingPanel(KWebSocketClient &websocket_client, std::mutex &lock)
   , emergency_cancel_btn(nullptr)
 {
   lv_obj_set_size(homing_cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(homing_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(homing_cont, false);
   lv_obj_set_style_pad_all(homing_cont, 8, 0);
   lv_obj_set_style_pad_row(homing_cont, 8, 0);
   lv_obj_set_style_border_width(homing_cont, 0, 0);
   lv_obj_set_style_bg_color(homing_cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     42,
     60,
     LV_GRID_FR(1),
@@ -145,7 +145,7 @@ HomingPanel::HomingPanel(KWebSocketClient &websocket_client, std::mutex &lock)
     54,
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -181,11 +181,11 @@ HomingPanel::HomingPanel(KWebSocketClient &websocket_client, std::mutex &lock)
   style_transparent_container(home_cont);
   lv_obj_set_style_pad_column(home_cont, 8, 0);
 
-  static lv_coord_t home_rows[] = {
+  static int32_t home_rows[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t home_cols[] = {
+  static int32_t home_cols[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
@@ -214,11 +214,11 @@ HomingPanel::HomingPanel(KWebSocketClient &websocket_client, std::mutex &lock)
   style_transparent_container(move_cont);
   lv_obj_set_style_pad_column(move_cont, 8, 0);
 
-  static lv_coord_t move_rows[] = {
+  static int32_t move_rows[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t move_cols[] = {
+  static int32_t move_cols[] = {
     LV_GRID_FR(2),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
@@ -235,13 +235,13 @@ HomingPanel::HomingPanel(KWebSocketClient &websocket_client, std::mutex &lock)
   lv_obj_set_style_pad_row(xy_cont, 6, 0);
   lv_obj_set_style_pad_column(xy_cont, 6, 0);
 
-  static lv_coord_t xy_rows[] = {
+  static int32_t xy_rows[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t xy_cols[] = {
+  static int32_t xy_cols[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_FR(1),
@@ -292,12 +292,12 @@ HomingPanel::HomingPanel(KWebSocketClient &websocket_client, std::mutex &lock)
   style_transparent_container(z_cont);
   lv_obj_set_style_pad_row(z_cont, 8, 0);
 
-  static lv_coord_t z_rows[] = {
+  static int32_t z_rows[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t z_cols[] = {
+  static int32_t z_cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -337,12 +337,12 @@ HomingPanel::HomingPanel(KWebSocketClient &websocket_client, std::mutex &lock)
   lv_obj_set_style_text_font(distance_label, &lv_font_montserrat_12, 0);
   lv_obj_set_style_text_color(distance_label, lv_color_hex(COLOR_MUTED), 0);
 
-  distance_btnm = lv_btnmatrix_create(distance_cont);
+  distance_btnm = lv_buttonmatrix_create(distance_cont);
   lv_obj_set_size(distance_btnm, LV_PCT(100), 46);
-  lv_btnmatrix_set_map(distance_btnm, distance_map);
-  lv_btnmatrix_set_btn_ctrl_all(distance_btnm, LV_BTNMATRIX_CTRL_CHECKABLE);
-  lv_btnmatrix_set_one_checked(distance_btnm, true);
-  lv_btnmatrix_set_btn_ctrl(distance_btnm, distance_idx, LV_BTNMATRIX_CTRL_CHECKED);
+  lv_buttonmatrix_set_map(distance_btnm, distance_map);
+  lv_buttonmatrix_set_button_ctrl_all(distance_btnm, LV_BUTTONMATRIX_CTRL_CHECKABLE);
+  lv_buttonmatrix_set_one_checked(distance_btnm, true);
+  lv_buttonmatrix_set_button_ctrl(distance_btnm, distance_idx, LV_BUTTONMATRIX_CTRL_CHECKED);
   lv_obj_add_event_cb(
       distance_btnm,
       &HomingPanel::_handle_distance_cb,
@@ -379,11 +379,11 @@ HomingPanel::HomingPanel(KWebSocketClient &websocket_client, std::mutex &lock)
   style_transparent_container(bottom_cont);
   lv_obj_set_style_pad_column(bottom_cont, 8, 0);
 
-  static lv_coord_t bottom_rows[] = {
+  static int32_t bottom_rows[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t bottom_cols[] = {
+  static int32_t bottom_cols[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
@@ -428,14 +428,14 @@ HomingPanel::~HomingPanel()
   ws.unregister_notify_update(this);
 
   if (emergency_prompt != nullptr) {
-    lv_obj_del(emergency_prompt);
+    lv_obj_delete(emergency_prompt);
     emergency_prompt = nullptr;
     emergency_confirm_btn = nullptr;
     emergency_cancel_btn = nullptr;
   }
 
   if (homing_cont != nullptr) {
-    lv_obj_del(homing_cont);
+    lv_obj_delete(homing_cont);
     homing_cont = nullptr;
   }
 }
@@ -443,9 +443,9 @@ HomingPanel::~HomingPanel()
 void HomingPanel::set_button_enabled(lv_obj_t *button, bool enabled)
 {
   if (enabled) {
-    lv_obj_clear_state(button, LV_STATE_DISABLED);
+    lv_obj_set_disabled(button, false);
   } else {
-    lv_obj_add_state(button, LV_STATE_DISABLED);
+    lv_obj_set_disabled(button, true);
   }
 }
 
@@ -469,11 +469,11 @@ void HomingPanel::update_z_icons()
   const bool inverted = !value.is_null() && value.template get<bool>();
 
   if (inverted) {
-    lv_img_set_src(z_up_icon, &z_farther);
-    lv_img_set_src(z_down_icon, &z_closer);
+    lv_image_set_src(z_up_icon, &z_farther);
+    lv_image_set_src(z_down_icon, &z_closer);
   } else {
-    lv_img_set_src(z_up_icon, &z_closer);
-    lv_img_set_src(z_down_icon, &z_farther);
+    lv_image_set_src(z_up_icon, &z_closer);
+    lv_image_set_src(z_down_icon, &z_farther);
   }
 }
 
@@ -505,12 +505,12 @@ void HomingPanel::foreground()
   }
 
   update_z_icons();
-  lv_obj_move_foreground(homing_cont);
+  lv_obj_move_to_index(homing_cont, -1);
 }
 
 const char *HomingPanel::selected_distance() const
 {
-  const char *distance = lv_btnmatrix_get_btn_text(distance_btnm, distance_idx);
+  const char *distance = lv_buttonmatrix_get_button_text(distance_btnm, distance_idx);
   return distance == nullptr ? "1" : distance;
 }
 
@@ -526,13 +526,13 @@ void HomingPanel::request_emergency_stop()
   }
 
   if (emergency_prompt != nullptr) {
-    lv_obj_move_foreground(emergency_prompt);
+    lv_obj_move_to_index(emergency_prompt, -1);
     return;
   }
 
-  emergency_prompt = lv_obj_create(lv_scr_act());
+  emergency_prompt = lv_obj_create(lv_screen_active());
   lv_obj_set_size(emergency_prompt, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(emergency_prompt, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(emergency_prompt, false);
   lv_obj_set_style_pad_all(emergency_prompt, 0, 0);
   lv_obj_set_style_border_width(emergency_prompt, 0, 0);
   lv_obj_set_style_radius(emergency_prompt, 0, 0);
@@ -542,7 +542,7 @@ void HomingPanel::request_emergency_stop()
   lv_obj_t *dialog = lv_obj_create(emergency_prompt);
   lv_obj_set_size(dialog, LV_PCT(90), 170);
   lv_obj_center(dialog);
-  lv_obj_clear_flag(dialog, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(dialog, false);
   lv_obj_set_style_pad_all(dialog, 12, 0);
   lv_obj_set_style_bg_color(dialog, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(dialog, 1, 0);
@@ -552,14 +552,14 @@ void HomingPanel::request_emergency_stop()
 
   lv_obj_t *message = lv_label_create(dialog);
   lv_label_set_text(message, "Stop the printer immediately?");
-  lv_label_set_long_mode(message, LV_LABEL_LONG_WRAP);
+  lv_label_set_long_mode(message, LV_LABEL_LONG_MODE_WRAP);
   lv_obj_set_width(message, LV_PCT(100));
   lv_obj_set_style_text_align(message, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_font(message, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(message, lv_color_hex(COLOR_TEXT), 0);
   lv_obj_align(message, LV_ALIGN_TOP_MID, 0, 14);
 
-  emergency_confirm_btn = lv_btn_create(dialog);
+  emergency_confirm_btn = lv_button_create(dialog);
   style_button(emergency_confirm_btn, true);
   lv_obj_set_size(emergency_confirm_btn, 100, 46);
   lv_obj_align(emergency_confirm_btn, LV_ALIGN_BOTTOM_LEFT, 0, 0);
@@ -574,7 +574,7 @@ void HomingPanel::request_emergency_stop()
   lv_obj_set_style_text_color(confirm_label, lv_color_hex(COLOR_DANGER), 0);
   lv_obj_center(confirm_label);
 
-  emergency_cancel_btn = lv_btn_create(dialog);
+  emergency_cancel_btn = lv_button_create(dialog);
   style_button(emergency_cancel_btn);
   lv_obj_set_size(emergency_cancel_btn, 100, 46);
   lv_obj_align(emergency_cancel_btn, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
@@ -589,7 +589,7 @@ void HomingPanel::request_emergency_stop()
   lv_obj_set_style_text_color(cancel_label, lv_color_hex(COLOR_TEXT), 0);
   lv_obj_center(cancel_label);
 
-  lv_obj_move_foreground(emergency_prompt);
+  lv_obj_move_to_index(emergency_prompt, -1);
 }
 
 void HomingPanel::handle_emergency_prompt(lv_event_t *event)
@@ -598,7 +598,7 @@ void HomingPanel::handle_emergency_prompt(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *button = lv_event_get_current_target(event);
+  lv_obj_t *button = lv_event_get_current_target_obj(event);
   if (button == emergency_confirm_btn) {
     spdlog::debug("emergency stop confirmed");
     ws.send_jsonrpc("printer.emergency_stop");
@@ -610,7 +610,7 @@ void HomingPanel::handle_emergency_prompt(lv_event_t *event)
   emergency_cancel_btn = nullptr;
 
   if (overlay != nullptr) {
-    lv_obj_del(overlay);
+    lv_obj_delete(overlay);
   }
 }
 
@@ -620,11 +620,11 @@ void HomingPanel::handle_callback(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *button = lv_event_get_current_target(event);
+  lv_obj_t *button = lv_event_get_current_target_obj(event);
   std::string move_op;
 
   if (button == back_btn) {
-    lv_obj_move_background(homing_cont);
+    lv_obj_move_to_index(homing_cont, 0);
     return;
   }
 
@@ -672,8 +672,8 @@ void HomingPanel::handle_distance_cb(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *matrix = lv_event_get_current_target(event);
-  const uint32_t idx = lv_btnmatrix_get_selected_btn(matrix);
+  lv_obj_t *matrix = lv_event_get_current_target_obj(event);
+  const uint32_t idx = lv_buttonmatrix_get_selected_button(matrix);
 
   if (idx < 7) {
     distance_idx = idx;

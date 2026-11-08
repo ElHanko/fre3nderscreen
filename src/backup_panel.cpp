@@ -13,7 +13,7 @@ lv_obj_t *label(lv_obj_t *parent, const char *text)
 {
   auto *item = lv_label_create(parent);
   lv_obj_set_width(item, LV_PCT(100));
-  lv_label_set_long_mode(item, LV_LABEL_LONG_WRAP);
+  lv_label_set_long_mode(item, LV_LABEL_LONG_MODE_WRAP);
   lv_obj_set_style_text_color(item, lv_color_hex(WHITE), 0);
   lv_obj_set_style_text_font(item, &lv_font_montserrat_12, 0);
   lv_label_set_text(item, text);
@@ -21,22 +21,22 @@ lv_obj_t *label(lv_obj_t *parent, const char *text)
 }
 void enabled(lv_obj_t *item, bool value)
 {
-  if (value) lv_obj_clear_state(item, LV_STATE_DISABLED);
-  else lv_obj_add_state(item, LV_STATE_DISABLED);
+  if (value) lv_obj_set_disabled(item, false);
+  else lv_obj_set_disabled(item, true);
 }
 } // namespace
 
 BackupPanel::BackupPanel()
-  : cont(lv_obj_create(lv_scr_act()))
+  : cont(lv_obj_create(lv_screen_active()))
 {
-  lv_obj_move_background(cont);
+  lv_obj_move_to_index(cont, 0);
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_bg_color(cont, lv_color_hex(BG), 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_pad_all(cont, 8, 0);
-  back = lv_btn_create(cont);
-  refresh = lv_btn_create(cont);
+  back = lv_button_create(cont);
+  refresh = lv_button_create(cont);
   for (auto *button : {back, refresh}) {
     lv_obj_set_size(button, 40, 34);
     lv_obj_set_style_bg_color(button, lv_color_hex(CARD), 0);
@@ -60,7 +60,7 @@ BackupPanel::BackupPanel()
   lv_obj_set_style_text_color(title, lv_color_hex(WHITE), 0);
   lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 7);
   auto *content = lv_obj_create(cont);
-  lv_obj_set_size(content, LV_PCT(100), lv_disp_get_ver_res(nullptr) - 58);
+  lv_obj_set_size(content, LV_PCT(100), lv_display_get_vertical_resolution(nullptr) - 58);
   lv_obj_align(content, LV_ALIGN_BOTTOM_MID, 0, 0);
   lv_obj_set_style_bg_color(content, lv_color_hex(CARD), 0);
   lv_obj_set_style_border_color(content, lv_color_hex(BORDER), 0);
@@ -73,7 +73,7 @@ BackupPanel::BackupPanel()
   lv_dropdown_set_options(role, "HOME\nSYS");
   label(content, "Destination");
   target = lv_dropdown_create(content);
-  create = lv_btn_create(content);
+  create = lv_button_create(content);
   auto *create_label = lv_label_create(create);
   lv_label_set_text(create_label, "Create backup");
   lv_obj_center(create_label);
@@ -94,15 +94,15 @@ BackupPanel::BackupPanel()
 
 BackupPanel::~BackupPanel()
 {
-  lv_timer_del(timer);
+  lv_timer_delete(timer);
   if (worker.joinable()) worker.join();
-  lv_obj_del(cont);
+  lv_obj_delete(cont);
 }
 
 void BackupPanel::foreground()
 {
   open = true;
-  lv_obj_move_foreground(cont);
+  lv_obj_move_to_index(cont, -1);
   start(false);
 }
 
@@ -229,11 +229,11 @@ void BackupPanel::poll()
 
 void BackupPanel::event_callback(lv_event_t *event)
 {
-  auto *self = static_cast<BackupPanel *>(event->user_data);
-  auto *item = lv_event_get_current_target(event);
+  auto *self = static_cast<BackupPanel *>(lv_event_get_user_data(event));
+  auto *item = lv_event_get_current_target_obj(event);
   if (item == self->back) {
     self->open = false;
-    lv_obj_move_background(self->cont);
+    lv_obj_move_to_index(self->cont, 0);
   } else if (item == self->refresh) {
     self->uncertain = false;
     self->notice.clear();
@@ -250,5 +250,5 @@ void BackupPanel::event_callback(lv_event_t *event)
 
 void BackupPanel::timer_callback(lv_timer_t *timer)
 {
-  static_cast<BackupPanel *>(timer->user_data)->poll();
+  static_cast<BackupPanel *>(lv_timer_get_user_data(timer))->poll();
 }

@@ -13,7 +13,7 @@ constexpr uint32_t COLOR_TEXT = 0xFFFFFF;
 
 void style_button(lv_obj_t *button)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
@@ -25,7 +25,7 @@ void style_button(lv_obj_t *button)
 
 void style_transparent_container(lv_obj_t *cont)
 {
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 0, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
@@ -39,25 +39,25 @@ Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
   , apps_panel()
   , ota_panel()
   , backup_panel()
-  , cont(lv_obj_create(lv_scr_act()))
+  , cont(lv_obj_create(lv_screen_active()))
   , header_cont(lv_obj_create(cont))
-  , back_btn(lv_btn_create(header_cont))
+  , back_btn(lv_button_create(header_cont))
   , title_label(lv_label_create(header_cont))
-  , wifi_btn(lv_btn_create(cont))
-  , system_btn(lv_btn_create(cont))
-  , apps_btn(lv_btn_create(cont))
-  , ota_btn(lv_btn_create(cont))
-  , backup_btn(lv_btn_create(cont))
+  , wifi_btn(lv_button_create(cont))
+  , system_btn(lv_button_create(cont))
+  , apps_btn(lv_button_create(cont))
+  , ota_btn(lv_button_create(cont))
+  , backup_btn(lv_button_create(cont))
 {
-  lv_obj_move_background(cont);
+  lv_obj_move_to_index(cont, 0);
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 8, 0);
   lv_obj_set_style_pad_row(cont, 8, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_color(cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     42,
     76,
     76,
@@ -66,7 +66,7 @@ Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
     76,
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -207,14 +207,14 @@ Fre3nderPanel::Fre3nderPanel(std::mutex &lock)
 Fre3nderPanel::~Fre3nderPanel()
 {
   if (cont != nullptr) {
-    lv_obj_del(cont);
+    lv_obj_delete(cont);
     cont = nullptr;
   }
 }
 
 void Fre3nderPanel::foreground()
 {
-  lv_obj_move_foreground(cont);
+  lv_obj_move_to_index(cont, -1);
 }
 
 void Fre3nderPanel::handle_callback(lv_event_t *event)
@@ -223,10 +223,10 @@ void Fre3nderPanel::handle_callback(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *button = lv_event_get_current_target(event);
+  lv_obj_t *button = lv_event_get_current_target_obj(event);
 
   if (button == back_btn) {
-    lv_obj_move_background(cont);
+    lv_obj_move_to_index(cont, 0);
   } else if (button == wifi_btn) {
     spdlog::trace("Fre3nder WiFi settings pressed");
     wifi_panel.foreground();

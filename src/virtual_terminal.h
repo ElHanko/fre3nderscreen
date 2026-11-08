@@ -10,6 +10,8 @@ void activate();
 Event poll();
 void acknowledge(bool acquired);
 void shutdown();
-void flush(lv_disp_drv_t *driver, const lv_area_t *area, lv_color_t *pixels);
+void attach_display(lv_display_t *display, const char *framebuffer_path);
+void blank(bool enabled);
+void flush(lv_display_t *display, const lv_area_t *area, uint8_t *pixels);
 }
 #endif

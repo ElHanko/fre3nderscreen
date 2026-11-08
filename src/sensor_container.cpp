@@ -16,7 +16,7 @@ SensorContainer::SensorContainer(KWebSocketClient &c,
                                  lv_chart_series_t *chart_series)
   : ws(c)
   , sensor_cont(lv_obj_create(parent))
-  , sensor_img(lv_img_create(sensor_cont))
+  , sensor_img(lv_image_create(sensor_cont))
   , sensor_label(lv_label_create(sensor_cont))
   , value_label(lv_label_create(sensor_cont))
   , value(0)
@@ -30,17 +30,17 @@ SensorContainer::SensorContainer(KWebSocketClient &c,
   , last_updated_ts(std::time(nullptr))
   , home_layout(false)
 {
-    lv_obj_clear_flag(sensor_cont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_scrollable(sensor_cont, false);
     lv_obj_set_style_border_color(sensor_cont, color, LV_PART_MAIN);
     lv_obj_set_style_border_side(sensor_cont, LV_BORDER_SIDE_LEFT, LV_PART_MAIN);
     lv_obj_set_style_border_width(sensor_cont, 5, LV_PART_MAIN);
 
-    auto width_scale = (double)lv_disp_get_physical_hor_res(NULL) / 800.0;
-    auto height_scale = (double)lv_disp_get_physical_ver_res(NULL) / 480.0;
+    auto width_scale = (double)lv_display_get_physical_horizontal_resolution(NULL) / 800.0;
+    auto height_scale = (double)lv_display_get_physical_vertical_resolution(NULL) / 480.0;
     lv_obj_set_size(sensor_cont, 330 * width_scale, 60 * height_scale);
     lv_obj_set_style_pad_all(sensor_cont, 0, 0);
 
-    lv_img_set_src(sensor_img, img);
+    lv_image_set_src(sensor_img, img);
     lv_obj_align(sensor_img, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_label_set_text(sensor_label, text);
@@ -62,8 +62,8 @@ SensorContainer::SensorContainer(KWebSocketClient &c,
       lv_obj_align(target_label, LV_ALIGN_RIGHT_MID, 0, 0);
       lv_obj_set_style_pad_all(target_label, 8 * width_scale, 0);
     } else {
-      lv_obj_add_flag(target_label, LV_OBJ_FLAG_HIDDEN);
-      lv_obj_add_flag(divider_label, LV_OBJ_FLAG_HIDDEN);
+      lv_obj_set_hidden(target_label, true);
+      lv_obj_set_hidden(divider_label, true);
     }
 
     if (can_edit) {
@@ -91,13 +91,13 @@ SensorContainer::SensorContainer(KWebSocketClient &c,
                                  lv_chart_series_t *chart_series)
   : SensorContainer(c, parent, img, text, color, can_edit, show_target, np, name, chart, chart_series)
 {
-  lv_img_set_zoom(sensor_img, img_scale);
+  lv_image_set_scale(sensor_img, img_scale);
 }
 
 SensorContainer::~SensorContainer() {
   if (sensor_cont != NULL) {
     spdlog::debug("deleting sensor {}", id);
-    lv_obj_del(sensor_cont);
+    lv_obj_delete(sensor_cont);
     sensor_cont = NULL;
   }
 
@@ -119,7 +119,7 @@ void SensorContainer::use_compact_layout()
   lv_obj_align(sensor_img, LV_ALIGN_LEFT_MID, 4, 0);
 
   lv_obj_set_width(sensor_label, 74);
-  lv_label_set_long_mode(sensor_label, LV_LABEL_LONG_DOT);
+  lv_label_set_long_mode(sensor_label, LV_LABEL_LONG_MODE_DOTS);
   lv_obj_align_to(
       sensor_label,
       sensor_img,
@@ -144,7 +144,7 @@ void SensorContainer::use_compact_layout()
       LV_TEXT_ALIGN_CENTER,
       0);
 
-  if (!lv_obj_has_flag(target_label, LV_OBJ_FLAG_HIDDEN)) {
+  if (!lv_obj_is_hidden(target_label)) {
     lv_obj_set_width(value_label, 32);
     lv_obj_align(value_label, LV_ALIGN_RIGHT_MID, -52, 0);
 
@@ -171,9 +171,9 @@ void SensorContainer::use_home_layout()
   lv_obj_set_style_border_color(sensor_cont, lv_color_hex(0x25323A), LV_PART_MAIN);
   lv_obj_set_style_bg_color(sensor_cont, lv_color_hex(0x11171B), LV_PART_MAIN);
 
-  lv_obj_add_flag(sensor_img, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(divider_label, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(target_label, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(sensor_img, true);
+  lv_obj_set_hidden(divider_label, true);
+  lv_obj_set_hidden(target_label, true);
 
   lv_obj_set_width(sensor_label, LV_SIZE_CONTENT);
   lv_obj_set_style_text_font(sensor_label, &lv_font_montserrat_12, 0);

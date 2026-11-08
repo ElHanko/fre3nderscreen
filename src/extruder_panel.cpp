@@ -7,13 +7,13 @@
 #include <algorithm>
 #include <cctype>
 
-LV_IMG_DECLARE(spoolman_img);
-LV_IMG_DECLARE(extrude_img);
-LV_IMG_DECLARE(retract_img);
-LV_IMG_DECLARE(unload_filament_img);
-LV_IMG_DECLARE(load_filament_img);
-LV_IMG_DECLARE(extruder);
-LV_IMG_DECLARE(cooldown_img);
+LV_IMAGE_DECLARE(spoolman_img);
+LV_IMAGE_DECLARE(extrude_img);
+LV_IMAGE_DECLARE(retract_img);
+LV_IMAGE_DECLARE(unload_filament_img);
+LV_IMAGE_DECLARE(load_filament_img);
+LV_IMAGE_DECLARE(extruder);
+LV_IMAGE_DECLARE(cooldown_img);
 
 namespace {
 
@@ -37,7 +37,7 @@ static const char *speed_map[] = {
 
 void style_button(lv_obj_t *button)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
@@ -50,7 +50,7 @@ void style_button(lv_obj_t *button)
 
 void style_transparent_container(lv_obj_t *cont)
 {
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 0, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
@@ -62,7 +62,7 @@ lv_obj_t *create_action_button(lv_obj_t *parent,
                                lv_event_cb_t callback,
                                void *user_data)
 {
-  lv_obj_t *button = lv_btn_create(parent);
+  lv_obj_t *button = lv_button_create(parent);
   style_button(button);
   lv_obj_set_style_pad_all(button, 6, 0);
   lv_obj_set_flex_flow(button, LV_FLEX_FLOW_COLUMN);
@@ -73,12 +73,12 @@ lv_obj_t *create_action_button(lv_obj_t *parent,
       LV_FLEX_ALIGN_CENTER);
   lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, user_data);
 
-  lv_obj_t *icon = lv_img_create(button);
-  lv_img_set_src(icon, image);
-  lv_img_set_zoom(icon, 128);
+  lv_obj_t *icon = lv_image_create(button);
+  lv_image_set_src(icon, image);
+  lv_image_set_scale(icon, 128);
   lv_obj_set_style_translate_y(icon, -6, 0);
-  lv_obj_set_style_img_recolor_opa(icon, LV_OPA_COVER, 0);
-  lv_obj_set_style_img_recolor(icon, lv_color_hex(COLOR_TEXT), 0);
+  lv_obj_set_style_image_recolor_opa(icon, LV_OPA_COVER, 0);
+  lv_obj_set_style_image_recolor(icon, lv_color_hex(COLOR_TEXT), 0);
 
   lv_obj_t *label = lv_label_create(button);
   lv_label_set_text(label, text);
@@ -115,12 +115,12 @@ lv_obj_t *create_selector(lv_obj_t *parent,
   lv_obj_set_style_text_font(label, &lv_font_montserrat_12, 0);
   lv_obj_set_style_text_color(label, lv_color_hex(COLOR_MUTED), 0);
 
-  lv_obj_t *matrix = lv_btnmatrix_create(cont);
+  lv_obj_t *matrix = lv_buttonmatrix_create(cont);
   lv_obj_set_size(matrix, LV_PCT(100), 38);
-  lv_btnmatrix_set_map(matrix, map);
-  lv_btnmatrix_set_btn_ctrl_all(matrix, LV_BTNMATRIX_CTRL_CHECKABLE);
-  lv_btnmatrix_set_one_checked(matrix, true);
-  lv_btnmatrix_set_btn_ctrl(matrix, selected, LV_BTNMATRIX_CTRL_CHECKED);
+  lv_buttonmatrix_set_map(matrix, map);
+  lv_buttonmatrix_set_button_ctrl_all(matrix, LV_BUTTONMATRIX_CTRL_CHECKABLE);
+  lv_buttonmatrix_set_one_checked(matrix, true);
+  lv_buttonmatrix_set_button_ctrl(matrix, selected, LV_BUTTONMATRIX_CTRL_CHECKED);
   lv_obj_add_event_cb(matrix, callback, LV_EVENT_VALUE_CHANGED, user_data);
 
   lv_obj_set_style_bg_color(matrix, lv_color_hex(COLOR_CARD), LV_PART_MAIN);
@@ -157,7 +157,7 @@ ExtruderPanel::ExtruderPanel(KWebSocketClient &websocket_client,
                              SpoolmanPanel &sm)
   : NotifyConsumer(lock)
   , ws(websocket_client)
-  , panel_cont(lv_obj_create(lv_scr_act()))
+  , panel_cont(lv_obj_create(lv_screen_active()))
   , spoolman_panel(sm)
   , extruder_temp(
         ws,
@@ -173,7 +173,7 @@ ExtruderPanel::ExtruderPanel(KWebSocketClient &websocket_client,
         nullptr,
         nullptr)
   , header_cont(lv_obj_create(panel_cont))
-  , back_btn(lv_btn_create(header_cont))
+  , back_btn(lv_button_create(header_cont))
   , title_label(lv_label_create(header_cont))
   , temp_selector(nullptr)
   , length_selector(nullptr)
@@ -208,15 +208,15 @@ ExtruderPanel::ExtruderPanel(KWebSocketClient &websocket_client,
     cooldown_macro = value.template get<std::string>();
   }
 
-  lv_obj_move_background(panel_cont);
+  lv_obj_move_to_index(panel_cont, 0);
   lv_obj_set_size(panel_cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(panel_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(panel_cont, false);
   lv_obj_set_style_pad_all(panel_cont, 8, 0);
   lv_obj_set_style_pad_row(panel_cont, 6, 0);
   lv_obj_set_style_border_width(panel_cont, 0, 0);
   lv_obj_set_style_bg_color(panel_cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     42,
     40,
     58,
@@ -225,7 +225,7 @@ ExtruderPanel::ExtruderPanel(KWebSocketClient &websocket_client,
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -316,12 +316,12 @@ ExtruderPanel::ExtruderPanel(KWebSocketClient &websocket_client,
   lv_obj_set_style_pad_row(actions_cont, 6, 0);
   lv_obj_set_style_pad_column(actions_cont, 6, 0);
 
-  static lv_coord_t action_rows[] = {
+  static int32_t action_rows[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t action_cols[] = {
+  static int32_t action_cols[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_FR(1),
@@ -378,21 +378,21 @@ ExtruderPanel::~ExtruderPanel()
 void ExtruderPanel::set_button_enabled(lv_obj_t *button, bool enabled)
 {
   if (enabled) {
-    lv_obj_clear_state(button, LV_STATE_DISABLED);
+    lv_obj_set_disabled(button, false);
   } else {
-    lv_obj_add_state(button, LV_STATE_DISABLED);
+    lv_obj_set_disabled(button, true);
   }
 }
 
 const char *ExtruderPanel::selected_value(lv_obj_t *selector, uint32_t index) const
 {
-  const char *value = lv_btnmatrix_get_btn_text(selector, index);
+  const char *value = lv_buttonmatrix_get_button_text(selector, index);
   return value == nullptr ? "" : value;
 }
 
 void ExtruderPanel::foreground()
 {
-  lv_obj_move_foreground(panel_cont);
+  lv_obj_move_to_index(panel_cont, -1);
 }
 
 void ExtruderPanel::enable_spoolman()
@@ -435,8 +435,8 @@ void ExtruderPanel::handle_selector_cb(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *selector = lv_event_get_current_target(event);
-  const uint32_t idx = lv_btnmatrix_get_selected_btn(selector);
+  lv_obj_t *selector = lv_event_get_current_target_obj(event);
+  const uint32_t idx = lv_buttonmatrix_get_selected_button(selector);
 
   if (idx >= 7) {
     return;
@@ -457,10 +457,10 @@ void ExtruderPanel::handle_callback(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *button = lv_event_get_current_target(event);
+  lv_obj_t *button = lv_event_get_current_target_obj(event);
 
   if (button == back_btn) {
-    lv_obj_move_background(panel_cont);
+    lv_obj_move_to_index(panel_cont, 0);
     return;
   }
 

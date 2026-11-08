@@ -29,7 +29,7 @@ double pi()
 
 void style_transparent(lv_obj_t *obj)
 {
-  lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(obj, false);
   lv_obj_set_style_pad_all(obj, 0, 0);
   lv_obj_set_style_border_width(obj, 0, 0);
   lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
@@ -37,7 +37,7 @@ void style_transparent(lv_obj_t *obj)
 
 void style_card(lv_obj_t *obj)
 {
-  lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(obj, false);
   lv_obj_set_style_bg_color(obj, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(obj, 1, 0);
   lv_obj_set_style_border_color(obj, lv_color_hex(COLOR_BORDER), 0);
@@ -47,7 +47,7 @@ void style_card(lv_obj_t *obj)
 
 void style_button(lv_obj_t *button, bool danger = false)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
@@ -83,7 +83,7 @@ lv_obj_t *create_metric_card(lv_obj_t *parent,
 
   lv_obj_t *value = lv_label_create(card);
   lv_label_set_text(value, "--");
-  lv_label_set_long_mode(value, LV_LABEL_LONG_DOT);
+  lv_label_set_long_mode(value, LV_LABEL_LONG_MODE_DOTS);
   lv_obj_set_width(value, LV_PCT(100));
   lv_obj_set_style_text_align(value, LV_TEXT_ALIGN_LEFT, 0);
   lv_obj_set_style_text_font(value, &lv_font_montserrat_12, 0);
@@ -99,7 +99,7 @@ lv_obj_t *create_action_button(lv_obj_t *parent,
                                const char *label_text,
                                bool danger = false)
 {
-  lv_obj_t *button = lv_btn_create(parent);
+  lv_obj_t *button = lv_button_create(parent);
   style_button(button, danger);
   lv_obj_set_style_pad_all(button, 5, 0);
   lv_obj_set_style_pad_row(button, 3, 0);
@@ -144,12 +144,12 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
         mini_parent,
         &PrintStatusPanel::_handle_callback,
         this)
-  , status_cont(lv_obj_create(lv_scr_act()))
+  , status_cont(lv_obj_create(lv_screen_active()))
   , header_cont(lv_obj_create(status_cont))
-  , back_btn(lv_btn_create(header_cont))
+  , back_btn(lv_button_create(header_cont))
   , title_label(lv_label_create(header_cont))
   , thumbnail_cont(lv_obj_create(status_cont))
-  , thumbnail(lv_img_create(thumbnail_cont))
+  , thumbnail(lv_image_create(thumbnail_cont))
   , pbar_cont(lv_obj_create(thumbnail_cont))
   , filename_label(lv_label_create(pbar_cont))
   , progress_bar(lv_bar_create(pbar_cont))
@@ -170,33 +170,33 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
   , resume_btn(nullptr)
   , cancel_btn(nullptr)
   , emergency_btn(nullptr)
-  , confirm_overlay(lv_obj_create(lv_scr_act()))
+  , confirm_overlay(lv_obj_create(lv_screen_active()))
   , confirm_dialog(lv_obj_create(confirm_overlay))
   , confirm_message(lv_label_create(confirm_dialog))
-  , confirm_yes_btn(lv_btn_create(confirm_dialog))
-  , confirm_no_btn(lv_btn_create(confirm_dialog))
+  , confirm_yes_btn(lv_button_create(confirm_dialog))
+  , confirm_no_btn(lv_button_create(confirm_dialog))
   , pending_confirmation(ConfirmAction::None)
   , estimated_time_s(0)
   , filament_diameter(1.75)
   , extruder_target(-1)
   , heater_bed_target(-1)
 {
-  lv_obj_move_background(status_cont);
+  lv_obj_move_to_index(status_cont, 0);
   lv_obj_set_size(status_cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(status_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(status_cont, false);
   lv_obj_set_style_pad_all(status_cont, 8, 0);
   lv_obj_set_style_pad_row(status_cont, 6, 0);
   lv_obj_set_style_border_width(status_cont, 0, 0);
   lv_obj_set_style_bg_color(status_cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t root_rows[] = {
+  static int32_t root_rows[] = {
     42,
     96,
     LV_GRID_FR(1),
     104,
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t root_cols[] = {
+  static int32_t root_cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -235,11 +235,11 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
       LV_GRID_ALIGN_STRETCH, 1, 1);
   lv_obj_set_style_pad_all(thumbnail_cont, 8, 0);
 
-  static lv_coord_t summary_rows[] = {
+  static int32_t summary_rows[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t summary_cols[] = {
+  static int32_t summary_cols[] = {
     76,
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
@@ -253,7 +253,8 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
       thumbnail,
       LV_GRID_ALIGN_CENTER, 0, 1,
       LV_GRID_ALIGN_CENTER, 0, 1);
-  lv_img_set_size_mode(thumbnail, LV_IMG_SIZE_MODE_REAL);
+  lv_obj_set_size(thumbnail, 70, 70);
+  lv_image_set_inner_align(thumbnail, LV_IMAGE_ALIGN_CONTAIN);
 
   lv_obj_set_grid_cell(
       pbar_cont,
@@ -270,7 +271,7 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
       LV_FLEX_ALIGN_CENTER);
 
   lv_label_set_text(filename_label, "No active print");
-  lv_label_set_long_mode(filename_label, LV_LABEL_LONG_DOT);
+  lv_label_set_long_mode(filename_label, LV_LABEL_LONG_MODE_DOTS);
   lv_obj_set_width(filename_label, LV_PCT(100));
   lv_obj_set_style_text_font(filename_label, &lv_font_montserrat_12, 0);
   lv_obj_set_style_text_color(filename_label, lv_color_hex(COLOR_TEXT), 0);
@@ -301,13 +302,13 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
   lv_obj_set_style_pad_row(detail_cont, 6, 0);
   lv_obj_set_style_pad_column(detail_cont, 6, 0);
 
-  static lv_coord_t detail_rows[] = {
+  static int32_t detail_rows[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t detail_cols[] = {
+  static int32_t detail_cols[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_FR(1),
@@ -353,12 +354,12 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
   lv_obj_set_style_pad_row(buttons_cont, 6, 0);
   lv_obj_set_style_pad_column(buttons_cont, 6, 0);
 
-  static lv_coord_t action_rows[] = {
+  static int32_t action_rows[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t action_cols[] = {
+  static int32_t action_cols[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
@@ -412,7 +413,7 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
       LV_GRID_ALIGN_STRETCH, 1, 1,
       LV_GRID_ALIGN_STRETCH, 1, 1);
 
-  lv_obj_add_flag(resume_btn, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(resume_btn, true);
   set_button_enabled(resume_btn, false);
 
   lv_obj_t *actions[] = {
@@ -431,7 +432,7 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
   }
 
   lv_obj_set_size(confirm_overlay, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(confirm_overlay, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(confirm_overlay, false);
   lv_obj_set_style_pad_all(confirm_overlay, 0, 0);
   lv_obj_set_style_border_width(confirm_overlay, 0, 0);
   lv_obj_set_style_radius(confirm_overlay, 0, 0);
@@ -440,7 +441,7 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
       lv_color_hex(0x000000),
       0);
   lv_obj_set_style_bg_opa(confirm_overlay, LV_OPA_70, 0);
-  lv_obj_add_flag(confirm_overlay, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(confirm_overlay, true);
 
   lv_obj_set_size(confirm_dialog, LV_PCT(90), 170);
   lv_obj_center(confirm_dialog);
@@ -448,7 +449,7 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
   lv_obj_set_style_pad_all(confirm_dialog, 12, 0);
 
   lv_obj_set_width(confirm_message, LV_PCT(100));
-  lv_label_set_long_mode(confirm_message, LV_LABEL_LONG_WRAP);
+  lv_label_set_long_mode(confirm_message, LV_LABEL_LONG_MODE_WRAP);
   lv_obj_set_style_text_align(
       confirm_message,
       LV_TEXT_ALIGN_CENTER,
@@ -502,12 +503,12 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
 PrintStatusPanel::~PrintStatusPanel()
 {
   if (confirm_overlay != nullptr) {
-    lv_obj_del(confirm_overlay);
+    lv_obj_delete(confirm_overlay);
     confirm_overlay = nullptr;
   }
 
   if (status_cont != nullptr) {
-    lv_obj_del(status_cont);
+    lv_obj_delete(status_cont);
     status_cont = nullptr;
   }
 
@@ -517,28 +518,28 @@ PrintStatusPanel::~PrintStatusPanel()
 void PrintStatusPanel::set_button_enabled(lv_obj_t *button, bool enabled)
 {
   if (enabled) {
-    lv_obj_clear_state(button, LV_STATE_DISABLED);
+    lv_obj_set_disabled(button, false);
   } else {
-    lv_obj_add_state(button, LV_STATE_DISABLED);
+    lv_obj_set_disabled(button, true);
   }
 }
 
 void PrintStatusPanel::foreground()
 {
-  lv_obj_move_foreground(status_cont);
+  lv_obj_move_to_index(status_cont, -1);
 }
 
 void PrintStatusPanel::background()
 {
   close_confirmation();
-  lv_obj_move_background(status_cont);
+  lv_obj_move_to_index(status_cont, 0);
 }
 
 void PrintStatusPanel::close_confirmation()
 {
   pending_confirmation = ConfirmAction::None;
-  lv_obj_add_flag(confirm_overlay, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_move_background(confirm_overlay);
+  lv_obj_set_hidden(confirm_overlay, true);
+  lv_obj_move_to_index(confirm_overlay, 0);
 }
 
 void PrintStatusPanel::execute_confirmation()
@@ -572,8 +573,8 @@ void PrintStatusPanel::request_confirmation(ConfirmAction action,
 
   pending_confirmation = action;
   lv_label_set_text(confirm_message, message);
-  lv_obj_clear_flag(confirm_overlay, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_move_foreground(confirm_overlay);
+  lv_obj_set_hidden(confirm_overlay, false);
+  lv_obj_move_to_index(confirm_overlay, -1);
 }
 
 void PrintStatusPanel::reset()
@@ -603,7 +604,7 @@ void PrintStatusPanel::reset()
   extruder_target = -1;
   heater_bed_target = -1;
 
-  lv_img_set_src(thumbnail, nullptr);
+  lv_image_set_src(thumbnail, nullptr);
   mini_print_status.reset();
 }
 
@@ -688,14 +689,14 @@ void PrintStatusPanel::populate()
       print_state.template get<std::string>() == "paused";
 
   if (paused) {
-    lv_obj_clear_flag(resume_btn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(resume_btn, false);
     set_button_enabled(resume_btn, true);
-    lv_obj_add_flag(pause_btn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(pause_btn, true);
     set_button_enabled(pause_btn, false);
   } else {
-    lv_obj_add_flag(resume_btn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(resume_btn, true);
     set_button_enabled(resume_btn, false);
-    lv_obj_clear_flag(pause_btn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(pause_btn, false);
     set_button_enabled(pause_btn, true);
   }
 
@@ -748,12 +749,7 @@ void PrintStatusPanel::handle_metadata(const std::string &gcode_file,
     std::lock_guard<std::mutex> lock(lv_lock);
     const std::string image_path = "A:" + fullpath;
 
-    const uint32_t zoom =
-        static_cast<uint32_t>(
-            (70.0 / static_cast<double>(thumb_detail.second)) * 256.0);
-
-    lv_img_set_zoom(thumbnail, zoom);
-    lv_img_set_src(thumbnail, image_path.c_str());
+    lv_image_set_src(thumbnail, image_path.c_str());
     mini_print_status.update_img(image_path, thumb_detail.second);
   }
 }
@@ -919,14 +915,14 @@ void PrintStatusPanel::consume(json &j)
     const bool paused = value.template get<bool>();
 
     if (paused) {
-      lv_obj_clear_flag(resume_btn, LV_OBJ_FLAG_HIDDEN);
+      lv_obj_set_hidden(resume_btn, false);
       set_button_enabled(resume_btn, true);
-      lv_obj_add_flag(pause_btn, LV_OBJ_FLAG_HIDDEN);
+      lv_obj_set_hidden(pause_btn, true);
       set_button_enabled(pause_btn, false);
     } else {
-      lv_obj_clear_flag(pause_btn, LV_OBJ_FLAG_HIDDEN);
+      lv_obj_set_hidden(pause_btn, false);
       set_button_enabled(pause_btn, true);
-      lv_obj_add_flag(resume_btn, LV_OBJ_FLAG_HIDDEN);
+      lv_obj_set_hidden(resume_btn, true);
       set_button_enabled(resume_btn, false);
     }
   }
@@ -941,7 +937,7 @@ void PrintStatusPanel::handle_callback(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *button = lv_event_get_current_target(event);
+  lv_obj_t *button = lv_event_get_current_target_obj(event);
 
   if (button == confirm_yes_btn) {
     execute_confirmation();

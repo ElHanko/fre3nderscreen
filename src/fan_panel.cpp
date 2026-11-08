@@ -16,7 +16,7 @@ constexpr uint32_t COLOR_MUTED = 0xB8C0C5;
 
 void style_button(lv_obj_t *button)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
@@ -31,7 +31,7 @@ lv_obj_t *create_text_button(lv_obj_t *parent,
                              lv_event_cb_t callback,
                              void *user_data)
 {
-  lv_obj_t *button = lv_btn_create(parent);
+  lv_obj_t *button = lv_button_create(parent);
   style_button(button);
   lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, user_data);
 
@@ -46,7 +46,7 @@ lv_obj_t *create_text_button(lv_obj_t *parent,
 
 void style_transparent_container(lv_obj_t *cont)
 {
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 0, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
@@ -57,26 +57,26 @@ void style_transparent_container(lv_obj_t *cont)
 FanPanel::FanPanel(KWebSocketClient &websocket_client, std::mutex &lock)
   : NotifyConsumer(lock)
   , ws(websocket_client)
-  , fanpanel_cont(lv_obj_create(lv_scr_act()))
+  , fanpanel_cont(lv_obj_create(lv_screen_active()))
   , header_cont(lv_obj_create(fanpanel_cont))
-  , back_btn(lv_btn_create(header_cont))
+  , back_btn(lv_button_create(header_cont))
   , title_label(lv_label_create(header_cont))
   , fans_cont(lv_obj_create(fanpanel_cont))
 {
-  lv_obj_move_background(fanpanel_cont);
+  lv_obj_move_to_index(fanpanel_cont, 0);
   lv_obj_set_size(fanpanel_cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(fanpanel_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(fanpanel_cont, false);
   lv_obj_set_style_pad_all(fanpanel_cont, 8, 0);
   lv_obj_set_style_pad_row(fanpanel_cont, 8, 0);
   lv_obj_set_style_border_width(fanpanel_cont, 0, 0);
   lv_obj_set_style_bg_color(fanpanel_cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     42,
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -124,7 +124,7 @@ FanPanel::~FanPanel()
   ws.unregister_notify_update(this);
 
   if (fanpanel_cont != nullptr) {
-    lv_obj_del(fanpanel_cont);
+    lv_obj_delete(fanpanel_cont);
     fanpanel_cont = nullptr;
   }
 }
@@ -137,7 +137,7 @@ FanPanel::FanControl FanPanel::create_fan_control(
 
   control.card = lv_obj_create(fans_cont);
   lv_obj_set_size(control.card, LV_PCT(100), 116);
-  lv_obj_clear_flag(control.card, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(control.card, false);
   lv_obj_set_style_pad_all(control.card, 8, 0);
   lv_obj_set_style_pad_row(control.card, 6, 0);
   lv_obj_set_style_pad_column(control.card, 8, 0);
@@ -146,13 +146,13 @@ FanPanel::FanControl FanPanel::create_fan_control(
   lv_obj_set_style_border_color(control.card, lv_color_hex(COLOR_BORDER), 0);
   lv_obj_set_style_bg_color(control.card, lv_color_hex(COLOR_CARD), 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     22,
     28,
     38,
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
@@ -217,7 +217,7 @@ void FanPanel::sync_value_event(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *object = lv_event_get_target(event);
+  lv_obj_t *object = lv_event_get_target_obj(event);
   for (auto &entry : fans) {
     if (object == entry.second.slider) {
       update_value(entry.second, lv_slider_get_value(object));
@@ -304,7 +304,7 @@ void FanPanel::foreground()
     }
   }
 
-  lv_obj_move_foreground(fanpanel_cont);
+  lv_obj_move_to_index(fanpanel_cont, -1);
 }
 
 void FanPanel::handle_callback(lv_event_t *event)
@@ -313,8 +313,8 @@ void FanPanel::handle_callback(lv_event_t *event)
     return;
   }
 
-  if (lv_event_get_current_target(event) == back_btn) {
-    lv_obj_move_background(fanpanel_cont);
+  if (lv_event_get_current_target_obj(event) == back_btn) {
+    lv_obj_move_to_index(fanpanel_cont, 0);
   }
 }
 
@@ -327,7 +327,7 @@ void FanPanel::handle_fan_update(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *object = lv_event_get_target(event);
+  lv_obj_t *object = lv_event_get_target_obj(event);
 
   for (auto &entry : fans) {
     FanControl &control = entry.second;
@@ -339,7 +339,7 @@ void FanPanel::handle_fan_update(lv_event_t *event)
       return;
     }
 
-    object = lv_event_get_current_target(event);
+    object = lv_event_get_current_target_obj(event);
 
     if (code == LV_EVENT_CLICKED && object == control.off_btn) {
       ws.gcode_script(fmt::format("SET_PIN PIN={} VALUE=0", fan_name));
@@ -364,7 +364,7 @@ void FanPanel::handle_fan_update_part_fan(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *object = lv_event_get_target(event);
+  lv_obj_t *object = lv_event_get_target_obj(event);
 
   for (auto &entry : fans) {
     FanControl &control = entry.second;
@@ -375,7 +375,7 @@ void FanPanel::handle_fan_update_part_fan(lv_event_t *event)
       return;
     }
 
-    object = lv_event_get_current_target(event);
+    object = lv_event_get_current_target_obj(event);
 
     if (code == LV_EVENT_CLICKED && object == control.off_btn) {
       ws.gcode_script("M106 S0");
@@ -400,7 +400,7 @@ void FanPanel::handle_fan_update_generic(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *object = lv_event_get_target(event);
+  lv_obj_t *object = lv_event_get_target_obj(event);
 
   for (auto &entry : fans) {
     FanControl &control = entry.second;
@@ -415,7 +415,7 @@ void FanPanel::handle_fan_update_generic(lv_event_t *event)
       return;
     }
 
-    object = lv_event_get_current_target(event);
+    object = lv_event_get_current_target_obj(event);
 
     if (code == LV_EVENT_CLICKED && object == control.off_btn) {
       ws.gcode_script(fmt::format(

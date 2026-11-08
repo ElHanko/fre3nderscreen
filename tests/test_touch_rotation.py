@@ -14,7 +14,7 @@ def logical_resolution(rotation, physical_width, physical_height):
 
 
 def lvgl_rotate(point, rotation, physical_width, physical_height):
-    """Model LVGL 8's rotation after the input driver's read callback."""
+    """Model LVGL 9.6's rotation after the input driver's read callback."""
     x, y = point
     if rotation in (ROT_180, ROT_270):
         x = physical_width - x - 1
@@ -36,32 +36,34 @@ def calibration_unrotate(point, rotation, logical_width, logical_height):
     return point
 
 
-physical_width, physical_height = 800, 480
-for rotation in (ROT_NONE, ROT_90, ROT_180, ROT_270):
-    logical_width, logical_height = logical_resolution(
-        rotation, physical_width, physical_height
-    )
-    points = (
-        (0, 0),
-        (logical_width - 1, 0),
-        (0, logical_height - 1),
-        (logical_width - 1, logical_height - 1),
-        (logical_width // 3, logical_height // 4),
-    )
-    for point in points:
-        driver_point = calibration_unrotate(
-            point, rotation, logical_width, logical_height
+for physical_width, physical_height in ((480, 272), (800, 480)):
+    for rotation in (ROT_NONE, ROT_90, ROT_180, ROT_270):
+        logical_width, logical_height = logical_resolution(
+            rotation, physical_width, physical_height
         )
-        assert 0 <= driver_point[0] < physical_width
-        assert 0 <= driver_point[1] < physical_height
-        assert lvgl_rotate(
-            driver_point, rotation, physical_width, physical_height
-        ) == point
+        points = (
+            (0, 0),
+            (logical_width - 1, 0),
+            (0, logical_height - 1),
+            (logical_width - 1, logical_height - 1),
+            (logical_width // 3, logical_height // 4),
+        )
+        for point in points:
+            driver_point = calibration_unrotate(
+                point, rotation, logical_width, logical_height
+            )
+            assert 0 <= driver_point[0] < physical_width
+            assert 0 <= driver_point[1] < physical_height
+            assert lvgl_rotate(
+                driver_point, rotation, physical_width, physical_height
+            ) == point
 
 # 90 and 270 must be distinct inverses for an asymmetric point.
 point = (37, 101)
 assert calibration_unrotate(point, ROT_90, 480, 800) == (101, 442)
 assert calibration_unrotate(point, ROT_270, 480, 800) == (698, 37)
+
+physical_width, physical_height = 800, 480
 
 # The old shared 270-degree inverse mirrors both logical axes at 90 degrees.
 old_driver_point = calibration_unrotate(point, ROT_270, 480, 800)
@@ -79,14 +81,14 @@ screen_source = " ".join(
     .split()
 )
 expected_cases = (
-    "case LV_DISP_ROT_NONE: break;",
-    "case LV_DISP_ROT_90: transformedPoint.x = y; "
-    "transformedPoint.y = lv_disp_get_hor_res(NULL) - x - 1; break;",
-    "case LV_DISP_ROT_180: "
-    "transformedPoint.x = lv_disp_get_hor_res(NULL) - x - 1; "
-    "transformedPoint.y = lv_disp_get_ver_res(NULL) - y - 1; break;",
-    "case LV_DISP_ROT_270: "
-    "transformedPoint.x = lv_disp_get_ver_res(NULL) - y - 1; "
+    "case LV_DISPLAY_ROTATION_0: break;",
+    "case LV_DISPLAY_ROTATION_90: transformedPoint.x = y; "
+    "transformedPoint.y = lv_display_get_horizontal_resolution(NULL) - x - 1; break;",
+    "case LV_DISPLAY_ROTATION_180: "
+    "transformedPoint.x = lv_display_get_horizontal_resolution(NULL) - x - 1; "
+    "transformedPoint.y = lv_display_get_vertical_resolution(NULL) - y - 1; break;",
+    "case LV_DISPLAY_ROTATION_270: "
+    "transformedPoint.x = lv_display_get_vertical_resolution(NULL) - y - 1; "
     "transformedPoint.y = x; break;",
 )
 for expected_case in expected_cases:

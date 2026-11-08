@@ -22,27 +22,27 @@ class FineTunePanel : public NotifyConsumer {
   void consume(json &j);
 
   static void _handle_callback(lv_event_t *event) {
-    auto *panel = static_cast<FineTunePanel *>(event->user_data);
+    auto *panel = static_cast<FineTunePanel *>(lv_event_get_user_data(event));
     panel->handle_callback(event);
   }
 
   static void _handle_zoffset(lv_event_t *event) {
-    auto *panel = static_cast<FineTunePanel *>(event->user_data);
+    auto *panel = static_cast<FineTunePanel *>(lv_event_get_user_data(event));
     panel->handle_zoffset(event);
   }
 
   static void _handle_pa(lv_event_t *event) {
-    auto *panel = static_cast<FineTunePanel *>(event->user_data);
+    auto *panel = static_cast<FineTunePanel *>(lv_event_get_user_data(event));
     panel->handle_pa(event);
   }
 
   static void _handle_speed(lv_event_t *event) {
-    auto *panel = static_cast<FineTunePanel *>(event->user_data);
+    auto *panel = static_cast<FineTunePanel *>(lv_event_get_user_data(event));
     panel->handle_speed(event);
   }
 
   static void _handle_flow(lv_event_t *event) {
-    auto *panel = static_cast<FineTunePanel *>(event->user_data);
+    auto *panel = static_cast<FineTunePanel *>(lv_event_get_user_data(event));
     panel->handle_flow(event);
   }
 

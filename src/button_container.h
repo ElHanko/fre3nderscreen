@@ -28,7 +28,7 @@ class ButtonContainer {
   void run_callback();
   
   static void _handle_callback(lv_event_t *event) {
-    ButtonContainer *button_container = (ButtonContainer*)event->user_data;
+    ButtonContainer *button_container = (ButtonContainer*)lv_event_get_user_data(event);
     button_container->handle_callback(event);
   };
 

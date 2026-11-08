@@ -24,22 +24,22 @@ class FanPanel : public NotifyConsumer {
   void handle_fan_update_generic(lv_event_t *event);
 
   static void _handle_callback(lv_event_t *event) {
-    auto *panel = static_cast<FanPanel *>(event->user_data);
+    auto *panel = static_cast<FanPanel *>(lv_event_get_user_data(event));
     panel->handle_callback(event);
   }
 
   static void _handle_fan_update(lv_event_t *event) {
-    auto *panel = static_cast<FanPanel *>(event->user_data);
+    auto *panel = static_cast<FanPanel *>(lv_event_get_user_data(event));
     panel->handle_fan_update(event);
   }
 
   static void _handle_fan_update_part_fan(lv_event_t *event) {
-    auto *panel = static_cast<FanPanel *>(event->user_data);
+    auto *panel = static_cast<FanPanel *>(lv_event_get_user_data(event));
     panel->handle_fan_update_part_fan(event);
   }
 
   static void _handle_fan_update_generic(lv_event_t *event) {
-    auto *panel = static_cast<FanPanel *>(event->user_data);
+    auto *panel = static_cast<FanPanel *>(lv_event_get_user_data(event));
     panel->handle_fan_update_generic(event);
   }
 

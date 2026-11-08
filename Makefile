@@ -24,9 +24,9 @@ WARNINGS		:= -Wall -Wextra -Wno-unused-function -Wno-error=strict-prototypes -Wp
 					-Wunreachable-code -Wno-switch-default -Wreturn-type -Wmultichar -Wformat-security -Wno-sign-compare
 CFLAGS 			?= -O3 -g0 -MD -MP -I$(LVGL_DIR)/ $(WARNINGS) 
 ifdef CROSS_COMPILE
-LDFLAGS 		?= -static -lm -Llibhv/lib -Lspdlog/build -l:libhv.a -latomic -lpthread -lstdc++fs -l:libspdlog.a
+LDFLAGS 		?= -static -lm -Llibhv/lib -Lspdlog/build -Llvgl/build/lib -l:libhv.a -latomic -lpthread -lstdc++fs -l:libspdlog.a -l:liblvgl.a
 else
-LDFLAGS 		?= -lm -Llibhv/lib -Lspdlog/build -l:libhv.a -latomic -lpthread -lstdc++fs -l:libspdlog.a
+LDFLAGS 		?= -lm -Llibhv/lib -Lspdlog/build -Llvgl/build/lib -l:libhv.a -latomic -lpthread -lstdc++fs -l:libspdlog.a -l:liblvgl.a
 endif
 BIN 			= fre3nderscreen
 BUILD_DIR 		= ./build
@@ -40,8 +40,6 @@ bindir 			?= $(prefix)/bin
 #Collect the files to compile
 MAINSRC = 		$(wildcard $(LVGL_DIR)/src/*.cpp)
 
-include $(LVGL_DIR)/lvgl/lvgl.mk
-include $(LVGL_DIR)/lv_drivers/lv_drivers.mk
 
 CSRCS 			+= $(wildcard $(LVGL_DIR)/assets/*.c)
 ifdef CROSS_COMPILE
@@ -70,7 +68,7 @@ TARGET 			= $(addprefix $(BUILD_OBJ_DIR)/, $(patsubst ./%, %, $(OBJS)))
 INC 				:= -I./ -I./lvgl/ -I./lv_touch_calibration -I./spdlog/include -Ilibhv/include
 LDLIBS	 			:= -lm
 
-DEFINES				+= -D _GNU_SOURCE -DSPDLOG_COMPILED_LIB
+DEFINES				+= -D _GNU_SOURCE -DSPDLOG_COMPILED_LIB -DLV_DISABLE_API_MAPPING
 
 # SIMULATION is enabled by default, need CROSS_COMPILE variable to do MIPS build
 ifndef CROSS_COMPILE
@@ -88,6 +86,18 @@ all: default
 libhv.a:
 	$(MAKE) -C libhv -j$(nproc) libhv
 
+# The upstream target owns LVGL's C, C++ and architecture-specific sources.
+.PHONY: liblvgl.a
+liblvgl.a:
+	@cmake -B lvgl/build -S lvgl -DBUILD_SHARED_LIBS=OFF \
+		-DCMAKE_C_COMPILER=$(CC) -DCMAKE_CXX_COMPILER=$(CXX) \
+		-DLV_BUILD_CONF_PATH=$(abspath lv_conf.h) \
+		-DCMAKE_C_FLAGS="-DLV_DISABLE_API_MAPPING $(if $(CROSS_COMPILE),,-DSIMULATOR)" \
+		-DCMAKE_CXX_FLAGS="-DLV_DISABLE_API_MAPPING $(if $(CROSS_COMPILE),,-DSIMULATOR)" \
+		-DLV_FETCH_DEPENDENCIES=OFF -DCONFIG_LV_BUILD_EXAMPLES=OFF \
+		-DCONFIG_LV_BUILD_DEMOS=OFF -DCONFIG_LV_USE_THORVG=OFF
+	$(MAKE) -C lvgl/build -j$(nproc) lvgl
+
 libspdlog.a:
 	@mkdir -p $(SPDLOG_DIR)/build
 	@cmake -B $(SPDLOG_DIR)/build -S $(SPDLOG_DIR)/ -DCMAKE_CXX_COMPILER=$(CXX)
@@ -103,10 +113,13 @@ $(BUILD_OBJ_DIR)/%.o: %.c
 	@$(COMPILE_CC)  $(CFLAGS) -c $< -o $@
 	@echo "CC $<"
 
-default: $(TARGET)
+default: liblvgl.a $(TARGET)
 	@mkdir -p $(dir $(BUILD_BIN_DIR)/)
 	$(CXX) -o $(BUILD_BIN_DIR)/$(BIN) $(TARGET) $(LDFLAGS) $(LDLIBS)
 	@echo "CXX $<"
+
+lvglclean:
+	rm -rf lvgl/build
 
 spdlogclean:
 	rm -rf $(SPDLOG_DIR)/build
@@ -125,6 +138,7 @@ uninstall:
 	$(RM) -r $(addprefix $(DESTDIR)$(bindir)/,$(BIN))
 
 build:
+	$(MAKE) lvglclean
 	$(MAKE) libhvclean
 	$(MAKE) libhv.a
 	$(MAKE) spdlogclean

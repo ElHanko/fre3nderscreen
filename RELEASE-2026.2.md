@@ -35,9 +35,12 @@ register snapshot, not the removed live metrics or autotuning contract.
 
 ### Retained scope and provenance
 
-- LVGL/lv_drivers, libhv and spdlog are used by rendering/input, Moonraker/JSON
-  and logging. Their pinned submodules, licenses and three production patches
-  remain. No third-party submodule contents were changed.
+- LVGL 9.6.0, libhv 1.3.4 and spdlog 1.17.0 provide rendering/input,
+  Moonraker/JSON and logging. Integrated LVGL drivers replace `lv_drivers`.
+  All three old dependency patches are removed; the sole remaining patch adds
+  opt-in evdev raw coordinates for the existing affine touch calibration.
+  LodePNG's Zlib notice is retained with LVGL's MIT notice in the app artifact.
+  Combined build and runtime qualification of these updates remain pending.
 - Theme selection constructs `<theme>.json` dynamically; all six themes are
   required by the current neutral-artifact/import file set. Retained.
 - Spoolman, power, LED and generic fan/sensor handling are reachable standard

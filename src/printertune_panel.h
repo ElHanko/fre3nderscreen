@@ -25,7 +25,7 @@ class PrinterTunePanel {
   void handle_callback(lv_event_t *event);
 
   static void _handle_callback(lv_event_t *event) {
-    auto *panel = static_cast<PrinterTunePanel *>(event->user_data);
+    auto *panel = static_cast<PrinterTunePanel *>(lv_event_get_user_data(event));
     panel->handle_callback(event);
   }
 

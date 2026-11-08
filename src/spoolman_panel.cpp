@@ -2,8 +2,8 @@
 #include "utils.h"
 #include "spdlog/spdlog.h"
 
-LV_IMG_DECLARE(back);
-LV_IMG_DECLARE(refresh_img);
+LV_IMAGE_DECLARE(back);
+LV_IMAGE_DECLARE(refresh_img);
 
 #define SORTED_BY_ID   1 << 0
 #define SORTED_BY_NAME 1 << 1
@@ -14,7 +14,7 @@ LV_IMG_DECLARE(refresh_img);
 SpoolmanPanel::SpoolmanPanel(KWebSocketClient &c, std::mutex &l)
   : ws(c)
   , lv_lock(l)
-  , cont(lv_obj_create(lv_scr_act()))
+  , cont(lv_obj_create(lv_screen_active()))
   , spool_table(lv_table_create(cont))
   , controls(lv_obj_create(cont))
   , switch_cont(lv_obj_create(controls))
@@ -24,33 +24,33 @@ SpoolmanPanel::SpoolmanPanel(KWebSocketClient &c, std::mutex &l)
   , active_id(-1)
   , sorted_by(SORTED_BY_ID)
 {
-  lv_obj_add_flag(cont, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_move_background(cont);
+  lv_obj_set_hidden(cont, true);
+  lv_obj_move_to_index(cont, 0);
 
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
   lv_obj_set_style_pad_all(cont, 0, 0);
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
 
   lv_obj_set_height(spool_table, LV_PCT(75));
   lv_obj_align(spool_table, LV_ALIGN_TOP_MID, 0, 5);
 
-  lv_table_set_col_cnt(spool_table, 8);
-  auto screen_width = lv_disp_get_physical_hor_res(NULL);
-  auto scale = (double)lv_disp_get_physical_hor_res(NULL) / 800.0;
-  lv_table_set_col_width(spool_table, 0, 64 * scale); // id
-  lv_table_set_col_width(spool_table, 3, 50 * scale); // color
-  lv_table_set_col_width(spool_table, 6, 60 * scale); // set active
-  lv_table_set_col_width(spool_table, 7, 60 * scale); // archive
+  lv_table_set_column_count(spool_table, 8);
+  auto screen_width = lv_display_get_physical_horizontal_resolution(NULL);
+  auto scale = (double)lv_display_get_physical_horizontal_resolution(NULL) / 800.0;
+  lv_table_set_column_width(spool_table, 0, 64 * scale); // id
+  lv_table_set_column_width(spool_table, 3, 50 * scale); // color
+  lv_table_set_column_width(spool_table, 6, 60 * scale); // set active
+  lv_table_set_column_width(spool_table, 7, 60 * scale); // archive
 
   auto remain_width = screen_width - scale * (60 + 50 + 60 + 60);
   double len_field_width = 0.23 * remain_width;
   double material_width = 0.17 * remain_width;
   int name_width = remain_width - (2 * len_field_width) - material_width;
-  lv_table_set_col_width(spool_table, 1, name_width); // name - product
-  lv_table_set_col_width(spool_table, 2, material_width); // material
-  lv_table_set_col_width(spool_table, 4, len_field_width);
-  lv_table_set_col_width(spool_table, 5, len_field_width);
+  lv_table_set_column_width(spool_table, 1, name_width); // name - product
+  lv_table_set_column_width(spool_table, 2, material_width); // material
+  lv_table_set_column_width(spool_table, 4, len_field_width);
+  lv_table_set_column_width(spool_table, 5, len_field_width);
   
   // controls
   lv_obj_set_width(controls, LV_PCT(100));
@@ -63,13 +63,14 @@ SpoolmanPanel::SpoolmanPanel(KWebSocketClient &c, std::mutex &l)
   lv_label_set_text(label, "Show Archived");
   lv_obj_align(label, LV_ALIGN_BOTTOM_LEFT, 0, -10);
   lv_obj_align(show_archived, LV_ALIGN_LEFT_MID, 30, -10);
-  lv_obj_clear_state(show_archived, LV_STATE_CHECKED);
+  lv_obj_set_checked(show_archived, false);
   lv_obj_add_event_cb(show_archived, &SpoolmanPanel::_handle_spoolman_action, LV_EVENT_VALUE_CHANGED, this);
 
   lv_obj_align(back_btn.get_container(), LV_ALIGN_BOTTOM_RIGHT, 0, 0);
 
   lv_obj_add_event_cb(spool_table, &SpoolmanPanel::_handle_spoolman_action, LV_EVENT_VALUE_CHANGED, this);
-  lv_obj_add_event_cb(spool_table, &SpoolmanPanel::_handle_spoolman_action, LV_EVENT_DRAW_PART_BEGIN, this);
+  lv_obj_set_send_draw_task_events(spool_table, true);
+  lv_obj_add_event_cb(spool_table, &SpoolmanPanel::_handle_spoolman_action, LV_EVENT_DRAW_TASK_ADDED, this);
 
   ws.register_method_callback("notify_active_spool_set",
 			      "SpoolmanPanel",
@@ -79,7 +80,7 @@ SpoolmanPanel::SpoolmanPanel(KWebSocketClient &c, std::mutex &l)
 
 SpoolmanPanel::~SpoolmanPanel() {
   if (cont != NULL) {
-    lv_obj_del(cont);
+    lv_obj_delete(cont);
     cont = NULL;
   }
 }
@@ -132,8 +133,8 @@ void SpoolmanPanel::init() {
 }
 
 void SpoolmanPanel::foreground() {
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_move_foreground(cont);
+  lv_obj_set_hidden(cont, false);
+  lv_obj_move_to_index(cont, -1);
 }
 
 void SpoolmanPanel::populate_spools(std::vector<json> &sorted_spools) {
@@ -195,7 +196,7 @@ void SpoolmanPanel::populate_spools(std::vector<json> &sorted_spools) {
       }
 
       if (is_active) {
-	lv_table_add_cell_ctrl(spool_table, row_idx, 6, LV_TABLE_CELL_CTRL_MERGE_RIGHT);
+	lv_table_set_cell_ctrl(spool_table, row_idx, 6, LV_TABLE_CELL_CTRL_MERGE_RIGHT);
 	lv_table_set_cell_value(spool_table, row_idx, 6, "(active)");
       } else {
 	if (is_archived) {
@@ -207,7 +208,7 @@ void SpoolmanPanel::populate_spools(std::vector<json> &sorted_spools) {
 
       row_idx++;
     }
-    lv_table_set_row_cnt(spool_table, row_idx);
+    lv_table_set_row_count(spool_table, row_idx);
   }
 }
 
@@ -229,10 +230,10 @@ void SpoolmanPanel::handle_active_id_update(json &j) {
 }
 
 void SpoolmanPanel::handle_callback(lv_event_t *event) {
-  lv_obj_t *btn = lv_event_get_current_target(event);
+  lv_obj_t *btn = lv_event_get_current_target_obj(event);
   if (btn == back_btn.get_container()) {
     spdlog::trace("spoolman back button pressed");
-    lv_obj_move_background(cont);
+    lv_obj_move_to_index(cont, 0);
   } else if (btn == reload_btn.get_container()) {
     spdlog::trace("spoolman reload button pressed");
     init();
@@ -242,7 +243,7 @@ void SpoolmanPanel::handle_callback(lv_event_t *event) {
 void SpoolmanPanel::handle_spoolman_action(lv_event_t *e) {
   lv_event_code_t code = lv_event_get_code(e);
   if(code == LV_EVENT_VALUE_CHANGED) {
-    lv_obj_t *clicked = lv_event_get_target(e);
+    lv_obj_t *clicked = lv_event_get_target_obj(e);
     if (clicked == show_archived) {
       std::vector<json> sorted_spools;
       KUtils::sort_map_values<uint32_t, json>(spools, sorted_spools, [](json &a, json &b) {
@@ -254,11 +255,11 @@ void SpoolmanPanel::handle_spoolman_action(lv_event_t *e) {
       return;
     }
 
-    uint16_t row;
-    uint16_t col;
+    uint32_t row;
+    uint32_t col;
 
     lv_table_get_selected_cell(spool_table, &row, &col);
-    uint16_t row_count = lv_table_get_row_cnt(spool_table);
+    uint32_t row_count = lv_table_get_row_count(spool_table);
     if (row == LV_TABLE_CELL_NONE || col == LV_TABLE_CELL_NONE || row >= row_count) {
       return;
     }
@@ -396,37 +397,34 @@ void SpoolmanPanel::handle_spoolman_action(lv_event_t *e) {
       }
       
     }
-  } else if (code == LV_EVENT_DRAW_PART_BEGIN) {
-    lv_obj_draw_part_dsc_t * dsc = lv_event_get_draw_part_dsc(e);
-    if(dsc->part == LV_PART_ITEMS) {
-      uint32_t row = dsc->id /  lv_table_get_col_cnt(spool_table);
-      uint32_t col = dsc->id - row * lv_table_get_col_cnt(spool_table);
-
-      if(row == 0) {
-	dsc->label_dsc->align = LV_TEXT_ALIGN_CENTER;
-	dsc->rect_dsc->bg_color = lv_color_mix(lv_palette_main(LV_PALETTE_BLUE),
-					       dsc->rect_dsc->bg_color, LV_OPA_20);
-	dsc->rect_dsc->bg_opa = LV_OPA_COVER;
+  } else if (code == LV_EVENT_DRAW_TASK_ADDED) {
+    lv_draw_task_t *task = lv_event_get_draw_task(e);
+    auto *base = static_cast<lv_draw_dsc_base_t *>(lv_draw_task_get_draw_dsc(task));
+    if (base->part != LV_PART_ITEMS) return;
+    uint32_t row = base->id1;
+    uint32_t col = base->id2;
+    if (auto *label = lv_draw_task_get_label_dsc(task)) {
+      if (row == 0) label->align = LV_TEXT_ALIGN_CENTER;
+    }
+    auto *fill = lv_draw_task_get_fill_dsc(task);
+    if (fill == nullptr) return;
+    if (row == 0) {
+      fill->color = lv_color_mix(lv_palette_main(LV_PALETTE_BLUE), fill->color, LV_OPA_20);
+      fill->opa = LV_OPA_COVER;
+    }
+    if (row != 0 && col == 3) {
+      const char *spool_id = lv_table_get_cell_value(spool_table, row, 0);
+      const auto &spool = spools.find(std::stoi(spool_id));
+      if (spool != spools.end()) {
+        const auto &color = spool->second["/filament/color_hex"_json_pointer];
+        if (!color.is_null()) {
+          fill->color = lv_color_hex(std::stoul(color.get<std::string>(), nullptr, 16));
+        }
       }
-
-      if (row != 0 && col == 3) {
-	const char *spool_id = lv_table_get_cell_value(spool_table, row, 0);
-	uint32_t id = std::stoi(spool_id);
-	const auto &spool = spools.find(id);
-	if (spool != spools.end()) {
-	  auto &c = spool->second["/filament/color_hex"_json_pointer];
-	  if (!c.is_null()) {
-	    dsc->rect_dsc->bg_color = lv_color_hex(std::stoul(c.template get<std::string>(),
-							      nullptr, 16));
-	  }
-	}
-      }
-
-      if((row != 0 && row % 2) == 0) {
-	dsc->rect_dsc->bg_color = lv_color_mix(lv_palette_main(LV_PALETTE_GREY),
-					       dsc->rect_dsc->bg_color, LV_OPA_10);
-	dsc->rect_dsc->bg_opa = LV_OPA_COVER;
-      }
+    }
+    if ((row != 0 && row % 2) == 0) {
+      fill->color = lv_color_mix(lv_palette_main(LV_PALETTE_GREY), fill->color, LV_OPA_10);
+      fill->opa = LV_OPA_COVER;
     }
   }
 }

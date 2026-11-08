@@ -13,7 +13,7 @@ constexpr uint32_t COLOR_MUTED = 0xB8C0C5;
 
 void style_transparent(lv_obj_t *obj)
 {
-  lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(obj, false);
   lv_obj_set_style_pad_all(obj, 0, 0);
   lv_obj_set_style_border_width(obj, 0, 0);
   lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
@@ -21,7 +21,7 @@ void style_transparent(lv_obj_t *obj)
 
 void style_icon_button(lv_obj_t *button)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_pad_all(button, 0, 0);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD_PRESSED), 0);
   lv_obj_set_style_border_width(button, 1, 0);
@@ -43,19 +43,19 @@ MacroItem::MacroItem(KWebSocketClient &client,
   , cont(lv_obj_create(parent))
   , top_cont(lv_obj_create(cont))
   , macro_label(lv_label_create(top_cont))
-  , hide_show_cont(lv_btn_create(top_cont))
+  , hide_show_cont(lv_button_create(top_cont))
   , hide_show(lv_label_create(hide_show_cont))
   , kb(keyboard)
   , hidden(hide)
   , always_visible(false)
 {
   if (hidden) {
-    lv_obj_add_flag(cont, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(cont, true);
   }
 
   lv_obj_set_width(cont, LV_PCT(100));
   lv_obj_set_height(cont, LV_SIZE_CONTENT);
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 8, 0);
   lv_obj_set_style_pad_row(cont, 6, 0);
   lv_obj_set_style_bg_color(cont, lv_color_hex(COLOR_CARD), 0);
@@ -74,13 +74,13 @@ MacroItem::MacroItem(KWebSocketClient &client,
   lv_obj_set_width(top_cont, LV_PCT(100));
   lv_obj_set_height(top_cont, 40);
 
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     36,
     LV_GRID_FR(1),
     40,
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     40,
     LV_GRID_TEMPLATE_LAST
   };
@@ -107,7 +107,7 @@ MacroItem::MacroItem(KWebSocketClient &client,
   lv_obj_center(hide_show);
 
   lv_label_set_text(macro_label, macro_name.c_str());
-  lv_label_set_long_mode(macro_label, LV_LABEL_LONG_DOT);
+  lv_label_set_long_mode(macro_label, LV_LABEL_LONG_MODE_DOTS);
   lv_obj_set_width(macro_label, LV_PCT(100));
   lv_obj_set_style_text_font(macro_label, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_color(macro_label, lv_color_hex(COLOR_TEXT), 0);
@@ -116,7 +116,7 @@ MacroItem::MacroItem(KWebSocketClient &client,
       LV_GRID_ALIGN_STRETCH, 1, 1,
       LV_GRID_ALIGN_CENTER, 0, 1);
 
-  lv_obj_t *run_btn = lv_btn_create(top_cont);
+  lv_obj_t *run_btn = lv_button_create(top_cont);
   style_icon_button(run_btn);
   lv_obj_set_grid_cell(
       run_btn,
@@ -155,7 +155,7 @@ MacroItem::MacroItem(KWebSocketClient &client,
       lv_obj_t *param_name = lv_label_create(row);
       lv_label_set_text(param_name, name.c_str());
       lv_obj_set_width(param_name, LV_PCT(38));
-      lv_label_set_long_mode(param_name, LV_LABEL_LONG_DOT);
+      lv_label_set_long_mode(param_name, LV_LABEL_LONG_MODE_DOTS);
       lv_obj_set_style_text_font(param_name, &lv_font_montserrat_12, 0);
       lv_obj_set_style_text_color(param_name, lv_color_hex(COLOR_MUTED), 0);
       lv_obj_align(param_name, LV_ALIGN_LEFT_MID, 0, 0);
@@ -185,7 +185,7 @@ MacroItem::MacroItem(KWebSocketClient &client,
 MacroItem::~MacroItem()
 {
   if (cont != nullptr) {
-    lv_obj_del(cont);
+    lv_obj_delete(cont);
     cont = nullptr;
   }
 }
@@ -193,17 +193,17 @@ MacroItem::~MacroItem()
 void MacroItem::handle_kb_input(lv_event_t *event)
 {
   const lv_event_code_t code = lv_event_get_code(event);
-  lv_obj_t *obj = lv_event_get_target(event);
+  lv_obj_t *obj = lv_event_get_target_obj(event);
 
   if (code == LV_EVENT_FOCUSED) {
     lv_keyboard_set_textarea(kb, obj);
-    lv_obj_clear_flag(kb, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(kb, false);
   } else if (code == LV_EVENT_DEFOCUSED) {
     lv_keyboard_set_textarea(kb, nullptr);
-    lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(kb, true);
   } else if (code == LV_EVENT_CANCEL) {
     lv_keyboard_set_textarea(kb, nullptr);
-    lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(kb, true);
   }
 }
 
@@ -256,7 +256,7 @@ void MacroItem::handle_hide_show(lv_event_t *event)
 
   if (hidden) {
     if (!always_visible) {
-      lv_obj_add_flag(cont, LV_OBJ_FLAG_HIDDEN);
+      lv_obj_set_hidden(cont, true);
     }
     lv_label_set_text(hide_show, LV_SYMBOL_EYE_OPEN);
     lv_obj_set_style_text_color(
@@ -264,7 +264,7 @@ void MacroItem::handle_hide_show(lv_event_t *event)
         lv_color_hex(COLOR_ACCENT),
         0);
   } else {
-    lv_obj_clear_flag(cont, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(cont, false);
     lv_label_set_text(hide_show, LV_SYMBOL_EYE_CLOSE);
     lv_obj_set_style_text_color(
         hide_show,
@@ -276,13 +276,13 @@ void MacroItem::handle_hide_show(lv_event_t *event)
 void MacroItem::hide_if_hidden()
 {
   if (hidden) {
-    lv_obj_add_flag(cont, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(cont, true);
   }
   always_visible = false;
 }
 
 void MacroItem::show()
 {
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(cont, false);
   always_visible = true;
 }

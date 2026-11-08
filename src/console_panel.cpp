@@ -20,7 +20,7 @@ constexpr uint32_t COLOR_MUTED = 0xB8C0C5;
 
 void style_transparent(lv_obj_t *obj)
 {
-  lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(obj, false);
   lv_obj_set_style_pad_all(obj, 0, 0);
   lv_obj_set_style_border_width(obj, 0, 0);
   lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
@@ -28,7 +28,7 @@ void style_transparent(lv_obj_t *obj)
 
 void style_button(lv_obj_t *button)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
@@ -59,9 +59,9 @@ ConsolePanel::ConsolePanel(KWebSocketClient &websocket_client,
                            std::mutex &lock)
   : ws(websocket_client)
   , lv_lock(lock)
-  , console_cont(lv_obj_create(lv_scr_act()))
+  , console_cont(lv_obj_create(lv_screen_active()))
   , header_cont(lv_obj_create(console_cont))
-  , back_btn(lv_btn_create(header_cont))
+  , back_btn(lv_button_create(header_cont))
   , title_label(lv_label_create(header_cont))
   , content_cont(lv_obj_create(console_cont))
   , output_label(lv_label_create(content_cont))
@@ -70,24 +70,24 @@ ConsolePanel::ConsolePanel(KWebSocketClient &websocket_client,
   , macro_list(lv_table_create(content_cont))
   , input_cont(lv_obj_create(content_cont))
   , input(lv_textarea_create(input_cont))
-  , clear_btn(lv_btn_create(input_cont))
-  , send_btn(lv_btn_create(input_cont))
+  , clear_btn(lv_button_create(input_cont))
+  , send_btn(lv_button_create(input_cont))
   , kb(lv_keyboard_create(content_cont))
 {
-  lv_obj_move_background(console_cont);
+  lv_obj_move_to_index(console_cont, 0);
   lv_obj_set_size(console_cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(console_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(console_cont, false);
   lv_obj_set_style_pad_all(console_cont, 8, 0);
   lv_obj_set_style_pad_row(console_cont, 8, 0);
   lv_obj_set_style_border_width(console_cont, 0, 0);
   lv_obj_set_style_bg_color(console_cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t root_rows[] = {
+  static int32_t root_rows[] = {
     42,
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t root_cols[] = {
+  static int32_t root_cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -169,7 +169,7 @@ ConsolePanel::ConsolePanel(KWebSocketClient &websocket_client,
       macro_list,
       lv_color_hex(COLOR_BORDER),
       LV_PART_ITEMS);
-  lv_table_set_col_width(macro_list, 0, 240);
+  lv_table_set_column_width(macro_list, 0, 240);
   lv_obj_add_event_cb(
       macro_list,
       &ConsolePanel::_handle_select_macro,
@@ -230,7 +230,7 @@ ConsolePanel::ConsolePanel(KWebSocketClient &websocket_client,
   lv_obj_set_style_text_color(send_label, lv_color_hex(COLOR_ACCENT), 0);
   lv_obj_center(send_label);
 
-  lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(kb, true);
   lv_obj_set_width(kb, LV_PCT(100));
   lv_obj_set_height(kb, 180);
   lv_obj_set_style_text_font(kb, &lv_font_montserrat_16, LV_STATE_DEFAULT);
@@ -244,7 +244,7 @@ ConsolePanel::ConsolePanel(KWebSocketClient &websocket_client,
 ConsolePanel::~ConsolePanel()
 {
   if (console_cont != nullptr) {
-    lv_obj_del(console_cont);
+    lv_obj_delete(console_cont);
     console_cont = nullptr;
   }
 }
@@ -256,9 +256,9 @@ lv_obj_t *ConsolePanel::get_container()
 
 void ConsolePanel::foreground()
 {
-  lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(kb, true);
   lv_keyboard_set_textarea(kb, nullptr);
-  lv_obj_move_foreground(console_cont);
+  lv_obj_move_to_index(console_cont, -1);
 }
 
 void ConsolePanel::handle_back(lv_event_t *event)
@@ -267,9 +267,9 @@ void ConsolePanel::handle_back(lv_event_t *event)
     return;
   }
 
-  lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(kb, true);
   lv_keyboard_set_textarea(kb, nullptr);
-  lv_obj_move_background(console_cont);
+  lv_obj_move_to_index(console_cont, 0);
 }
 
 void ConsolePanel::handle_kb_input(lv_event_t *event)
@@ -278,12 +278,12 @@ void ConsolePanel::handle_kb_input(lv_event_t *event)
 
   if (code == LV_EVENT_FOCUSED) {
     lv_keyboard_set_textarea(kb, input);
-    lv_obj_clear_flag(kb, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(kb, false);
   }
 
   if (code == LV_EVENT_DEFOCUSED) {
     lv_keyboard_set_textarea(kb, nullptr);
-    lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(kb, true);
   }
 
   if (code == LV_EVENT_VALUE_CHANGED) {
@@ -323,7 +323,7 @@ void ConsolePanel::handle_kb_input(lv_event_t *event)
           }
         }
 
-        lv_table_set_row_cnt(macro_list, index);
+        lv_table_set_row_count(macro_list, index);
       }
     }
   }
@@ -387,8 +387,8 @@ void ConsolePanel::handle_select_macro(lv_event_t *event)
     return;
   }
 
-  uint16_t row;
-  uint16_t col;
+  uint32_t row;
+  uint32_t col;
   lv_table_get_selected_cell(macro_list, &row, &col);
 
   const char *macro = lv_table_get_cell_value(macro_list, row, col);
@@ -451,7 +451,7 @@ void ConsolePanel::handle_macro_response(json &data)
 void ConsolePanel::handle_send_macro(lv_event_t *event)
 {
   if (lv_event_get_code(event) == LV_EVENT_CLICKED) {
-    lv_event_send(input, LV_EVENT_READY, this);
+    lv_obj_send_event(input, LV_EVENT_READY, this);
   }
 }
 

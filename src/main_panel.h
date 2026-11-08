@@ -47,37 +47,37 @@ class MainPanel : public NotifyConsumer {
   void handle_ledpanel_cb(lv_event_t *event);
 
   static void _handle_homing_cb(lv_event_t *event) {
-    MainPanel *panel = (MainPanel*)event->user_data;
+    MainPanel *panel = (MainPanel*)lv_event_get_user_data(event);
     panel->handle_homing_cb(event);
   };
 
   static void _handle_extrude_cb(lv_event_t *event) {
-    MainPanel *panel = (MainPanel*)event->user_data;
+    MainPanel *panel = (MainPanel*)lv_event_get_user_data(event);
     panel->handle_extrude_cb(event);
   };
 
   static void _handle_fanpanel_cb(lv_event_t *event) {
-    MainPanel *panel = (MainPanel*)event->user_data;
+    MainPanel *panel = (MainPanel*)lv_event_get_user_data(event);
     panel->handle_fanpanel_cb(event);
   };
 
   static void _handle_ledpanel_cb(lv_event_t *event) {
-    MainPanel *panel = (MainPanel*)event->user_data;
+    MainPanel *panel = (MainPanel*)lv_event_get_user_data(event);
     panel->handle_ledpanel_cb(event);
   };
 
   static void _handle_nav_cb(lv_event_t *event) {
-    MainPanel *panel = (MainPanel*)event->user_data;
+    MainPanel *panel = (MainPanel*)lv_event_get_user_data(event);
     panel->handle_nav_cb(event);
   };
 
   static void _handle_more_cb(lv_event_t *event) {
-    MainPanel *panel = (MainPanel*)event->user_data;
+    MainPanel *panel = (MainPanel*)lv_event_get_user_data(event);
     panel->handle_more_cb(event);
   };
 
   static void _refresh_header_status(lv_timer_t *timer) {
-    MainPanel *panel = (MainPanel*)timer->user_data;
+    MainPanel *panel = (MainPanel*)lv_timer_get_user_data(timer);
     panel->refresh_header_status();
   };
 
@@ -137,6 +137,7 @@ class MainPanel : public NotifyConsumer {
   bool warning_active;
 
   lv_obj_t *temp_cont;
+  lv_obj_t *chart_viewport;
   lv_obj_t *temp_chart;
 
   std::map<std::string, std::shared_ptr<SensorContainer>> sensors;

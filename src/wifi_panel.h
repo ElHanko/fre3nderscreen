@@ -14,7 +14,7 @@ class WifiPanel {
   void handle_back_btn(lv_event_t *event);
 
   static void _handle_back_btn(lv_event_t *event) {
-    auto *panel = static_cast<WifiPanel *>(event->user_data);
+    auto *panel = static_cast<WifiPanel *>(lv_event_get_user_data(event));
     panel->handle_back_btn(event);
   }
 

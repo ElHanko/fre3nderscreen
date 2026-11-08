@@ -1,8 +1,6 @@
 #include "fre3nderscreen.h"
 
 #include "config.h"
-#include "lv_drivers/display/fbdev.h"
-#include "lv_drivers/indev/evdev.h"
 #include "spdlog/sinks/rotating_file_sink.h"
 #include "spdlog/sinks/stdout_sinks.h"
 
@@ -25,7 +23,7 @@ Fre3nderScreen *Fre3nderScreen::instance = NULL;
 lv_style_t Fre3nderScreen::style_container;
 lv_style_t Fre3nderScreen::style_imgbtn_pressed;
 lv_style_t Fre3nderScreen::style_imgbtn_disabled;
-lv_theme_t Fre3nderScreen::th_new;
+lv_theme_t *Fre3nderScreen::th_new = nullptr;
 
 lv_obj_t *Fre3nderScreen::screen_saver = NULL;
 #ifndef SIMULATOR
@@ -118,38 +116,32 @@ Fre3nderScreen *Fre3nderScreen::init(std::function<void(lv_color_t, lv_color_t)>
   /*LittlevGL init*/
   lv_init();
 
-#ifndef SIMULATOR
-  /*Linux frame buffer device init*/
-  fbdev_init();
-  fbdev_unblank();
-#endif  // SIMULATOR
-
   hal_init(primary_color, secondary_color);
-  lv_png_init();
 
   lv_style_init(&style_container);
   lv_style_set_border_width(&style_container, 0);
   lv_style_set_radius(&style_container, 0);
 
   lv_style_init(&style_imgbtn_pressed);
-  lv_style_set_img_recolor_opa(&style_imgbtn_pressed, LV_OPA_100);
-  lv_style_set_img_recolor(&style_imgbtn_pressed, primary_color);
+  lv_style_set_image_recolor_opa(&style_imgbtn_pressed, LV_OPA_100);
+  lv_style_set_image_recolor(&style_imgbtn_pressed, primary_color);
 
   lv_style_init(&style_imgbtn_disabled);
-  lv_style_set_img_recolor_opa(&style_imgbtn_disabled, LV_OPA_100);
-  lv_style_set_img_recolor(&style_imgbtn_disabled, lv_palette_darken(LV_PALETTE_GREY, 1));
+  lv_style_set_image_recolor_opa(&style_imgbtn_disabled, LV_OPA_100);
+  lv_style_set_image_recolor(&style_imgbtn_disabled, lv_palette_darken(LV_PALETTE_GREY, 1));
 
   /*Initia1ize the new theme from the current theme*/
 
-  lv_theme_t *th_act = lv_disp_get_theme(NULL);
-  th_new = *th_act;
+  lv_theme_t *th_act = lv_display_get_theme(NULL);
+  th_new = lv_theme_create();
+  lv_theme_copy(th_new, th_act);
 
   /*Set the parent theme and the style apply callback for the new theme*/
-  lv_theme_set_parent(&th_new, th_act);
-  lv_theme_set_apply_cb(&th_new, &Fre3nderScreen::new_theme_apply_cb);
+  lv_theme_set_parent(th_new, th_act);
+  lv_theme_set_apply_cb(th_new, &Fre3nderScreen::new_theme_apply_cb);
 
   /*Assign the new theme to the current display*/
-  lv_disp_set_theme(NULL, &th_new);
+  lv_display_set_theme(NULL, th_new);
 
   ws.register_notify_update(State::get_instance());
 
@@ -162,16 +154,16 @@ Fre3nderScreen *Fre3nderScreen::init(std::function<void(lv_color_t, lv_color_t)>
   spdlog::info("connecting to printer at {}", ws_url);
   gs->connect_ws(ws_url);
 
-  screen_saver = lv_obj_create(lv_scr_act());
+  screen_saver = lv_obj_create(lv_screen_active());
 
   lv_obj_set_size(screen_saver, LV_PCT(100), LV_PCT(100));
   lv_obj_set_style_bg_opa(screen_saver, LV_OPA_100, 0);
-  lv_obj_add_flag(screen_saver, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_clear_flag(screen_saver, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_move_background(screen_saver);
+  lv_obj_set_clickable(screen_saver, true);
+  lv_obj_set_scrollable(screen_saver, false);
+  lv_obj_move_to_index(screen_saver, 0);
 
 #ifndef SIMULATOR
-  lv_obj_t *main_screen = lv_disp_get_scr_act(NULL);
+  lv_obj_t *main_screen = lv_display_get_screen_active(NULL);
   auto touch_calibrated = conf->get_json("/touch_calibrated");
   if (!touch_calibrated.is_null()) {
     auto is_calibrated = touch_calibrated.template get<bool>();
@@ -181,7 +173,7 @@ Fre3nderScreen *Fre3nderScreen::init(std::function<void(lv_color_t, lv_color_t)>
         lv_tc_register_coeff_save_cb(&Fre3nderScreen::save_calibration_coeff);
         lv_obj_t *touch_calibrate_scr = lv_tc_screen_create();
 
-        lv_disp_load_scr(touch_calibrate_scr);
+        lv_screen_load(touch_calibrate_scr);
 
         lv_tc_screen_start(touch_calibrate_scr);
         lv_obj_add_event_cb(touch_calibrate_scr, &Fre3nderScreen::handle_calibrated, LV_EVENT_READY, main_screen);
@@ -233,7 +225,7 @@ void Fre3nderScreen::loop() {
   {
     std::lock_guard<std::mutex> lock(lv_lock);
     VirtualTerminal::activate();
-    lv_obj_invalidate(lv_scr_act());
+    lv_obj_invalidate(lv_screen_active());
     lv_obj_invalidate(lv_layer_top());
     lv_obj_invalidate(lv_layer_sys());
     lv_refr_now(nullptr);
@@ -250,7 +242,7 @@ void Fre3nderScreen::loop() {
     auto event = VirtualTerminal::poll();
     if (event == VirtualTerminal::Stop) {
       if (vt_active) {
-        fbdev_unblank();
+        VirtualTerminal::blank(false);
         (void)set_backlight_power(backlight_power, '0');
       }
       break;
@@ -260,27 +252,27 @@ void Fre3nderScreen::loop() {
       lv_indev_enable(touch, false);
       TouchBeep::shutdown();
       // Leave tty1 visible even if the UI was in standby.
-      fbdev_unblank();
+      VirtualTerminal::blank(false);
       (void)set_backlight_power(backlight_power, '0');
       is_sleeping = false;
-      lv_obj_move_background(screen_saver);
+      lv_obj_move_to_index(screen_saver, 0);
       VirtualTerminal::acknowledge(false);
     }
     if (!vt_active || event == VirtualTerminal::Acquire) {
       lv_indev_data_t ignored = {};
-      evdev_read(touch->driver, &ignored); // Drain touches made on the text VT.
+      lv_tc_indev_read_raw(touch, &ignored); // Drain touches made on the text VT.
     }
     if (event == VirtualTerminal::Acquire) {
       VirtualTerminal::acknowledge(true);
       vt_active = true;
-      fbdev_unblank();
+      VirtualTerminal::blank(false);
       (void)set_backlight_power(backlight_power, '0');
       lv_indev_reset(touch, nullptr);
       lv_indev_wait_release(touch);
       lv_indev_enable(touch, true);
       TouchBeep::init(std::getenv("FRE3NDERSCREEN_BEEPER_INPUT"));
-      lv_disp_trig_activity(nullptr);
-      lv_obj_invalidate(lv_scr_act());
+      lv_display_trigger_activity(nullptr);
+      lv_obj_invalidate(lv_screen_active());
       lv_obj_invalidate(lv_layer_top());
       lv_obj_invalidate(lv_layer_sys());
     }
@@ -289,24 +281,24 @@ void Fre3nderScreen::loop() {
 
 #ifndef SIMULATOR
     if (vt_active && display_sleep != -1) {
-      if (lv_disp_get_inactive_time(NULL) > display_sleep) {
+      if (lv_display_get_inactive_time(NULL) > display_sleep) {
         if (!is_sleeping.load()) {
           spdlog::debug("putting display to sleeping");
-          lv_obj_move_foreground(screen_saver);
+          lv_obj_move_to_index(screen_saver, -1);
           if (!set_backlight_power(backlight_power, '4')) {
             spdlog::warn("cannot disable display backlight");
           }
-          fbdev_blank();
+          VirtualTerminal::blank(true);
           is_sleeping = true;
         }
       } else {
         if (is_sleeping.load()) {
           spdlog::debug("waking up display");
-          fbdev_unblank();
+          VirtualTerminal::blank(false);
           if (!set_backlight_power(backlight_power, '0')) {
             spdlog::warn("cannot enable display backlight");
           }
-          lv_obj_move_background(screen_saver);
+          lv_obj_move_to_index(screen_saver, 0);
           is_sleeping = false;
         }
       }
@@ -332,7 +324,7 @@ void Fre3nderScreen::new_theme_apply_cb(lv_theme_t *th, lv_obj_t *obj) {
     lv_obj_add_style(obj, &style_container, 0);
   }
 
-  if (lv_obj_check_type(obj, &lv_imgbtn_class)) {
+  if (lv_obj_check_type(obj, &lv_imagebutton_class)) {
     lv_obj_add_style(obj, &style_imgbtn_pressed, LV_STATE_PRESSED);
     lv_obj_add_style(obj, &style_imgbtn_disabled, LV_STATE_DISABLED);
   }
@@ -340,8 +332,8 @@ void Fre3nderScreen::new_theme_apply_cb(lv_theme_t *th, lv_obj_t *obj) {
 
 void Fre3nderScreen::handle_calibrated(lv_event_t *event) {
   spdlog::info("finished calibration");
-  lv_obj_t *main_screen = (lv_obj_t *)event->user_data;
-  lv_disp_load_scr(main_screen);
+  lv_obj_t *main_screen = (lv_obj_t *)lv_event_get_user_data(event);
+  lv_screen_load(main_screen);
 }
 
 void Fre3nderScreen::save_calibration_coeff(lv_tc_coeff_t coeff) {
@@ -349,22 +341,4 @@ void Fre3nderScreen::save_calibration_coeff(lv_tc_coeff_t coeff) {
   conf->set<std::vector<float>>("/touch_calibration_coeff",
                                 {coeff.a, coeff.b, coeff.c, coeff.d, coeff.e, coeff.f});
   conf->save();
-}
-
-/*Set in lv_conf.h as `LV_TICK_CUSTOM_SYS_TIME_EXPR`*/
-uint32_t custom_tick_get(void) {
-  static uint64_t start_ms = 0;
-  if (start_ms == 0) {
-    struct timeval tv_start;
-    gettimeofday(&tv_start, NULL);
-    start_ms = (tv_start.tv_sec * 1000000 + tv_start.tv_usec) / 1000;
-  }
-
-  struct timeval tv_now;
-  gettimeofday(&tv_now, NULL);
-  uint64_t now_ms;
-  now_ms = (tv_now.tv_sec * 1000000 + tv_now.tv_usec) / 1000;
-
-  uint32_t time_ms = now_ms - start_ms;
-  return time_ms;
 }

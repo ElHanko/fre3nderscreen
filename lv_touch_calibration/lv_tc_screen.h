@@ -11,6 +11,8 @@ extern "C" {
 #include "stdbool.h"
 
 #include "lvgl.h"
+/* Required for the existing custom widget subclass, not for application code. */
+#include "lvgl/src/core/lv_obj_private.h"
 
 
 /**********************
@@ -28,6 +30,7 @@ typedef struct {
     lv_obj_t *msgLabelObj;          /* The message label object */
     lv_obj_t *recalibrateBtnObj;    /* The recalibration button object */
     lv_obj_t *acceptBtnObj;         /* The confirmation button object */
+    uint32_t recalibrateSeconds;
     bool inputEnabled;              /* A flag which determines whether the screen accepts input from the touch driver.
                                        Makes sure pressing the crosshair is only handled once until releasing */
     lv_point_t scrPoints[3];        /* The points to be pressed (in the coordinate space of the screen) */

@@ -45,7 +45,7 @@ class SensorContainer {
   void handle_edit(lv_event_t *event);
 
   static void _handle_edit(lv_event_t *event) {
-    SensorContainer *panel = (SensorContainer*)event->user_data;
+    SensorContainer *panel = (SensorContainer*)lv_event_get_user_data(event);
     panel->handle_edit(event);
   };
 

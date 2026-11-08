@@ -7,7 +7,7 @@
 #include <cstdio>
 
 InitPanel::InitPanel(MainPanel &mp, BedMeshPanel &bmp, std::mutex& l)
-  : cont(lv_obj_create(lv_scr_act()))
+  : cont(lv_obj_create(lv_screen_active()))
   , label(lv_label_create(cont))
   , main_panel(mp)
   , bedmesh_panel(bmp)
@@ -16,7 +16,7 @@ InitPanel::InitPanel(MainPanel &mp, BedMeshPanel &bmp, std::mutex& l)
   lv_obj_set_size(cont, LV_PCT(55), LV_SIZE_CONTENT);
   lv_obj_align(cont, LV_ALIGN_TOP_MID, 0, 15);  
   
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_bg_color(cont, lv_palette_darken(LV_PALETTE_GREY, 1), 0);
   
   lv_obj_set_size(label, LV_PCT(100), LV_SIZE_CONTENT);
@@ -28,7 +28,7 @@ InitPanel::InitPanel(MainPanel &mp, BedMeshPanel &bmp, std::mutex& l)
 
 InitPanel::~InitPanel() {
   if (cont != NULL) {
-    lv_obj_del(cont);
+    lv_obj_delete(cont);
     cont = NULL;
   }
 }
@@ -109,8 +109,8 @@ void InitPanel::connected(KWebSocketClient &ws) {
 									data["/result/status/bed_mesh"_json_pointer]);
 			    spdlog::debug("done init");
 			    std::lock_guard<std::mutex> lock(this->lv_lock);
-			    lv_obj_add_flag(this->cont, LV_OBJ_FLAG_HIDDEN);
-			    lv_obj_move_background(this->cont);
+			    lv_obj_set_hidden(this->cont, true);
+			    lv_obj_move_to_index(this->cont, 0);
 					
 			  });
 	}
@@ -124,8 +124,8 @@ void InitPanel::connected(KWebSocketClient &ws) {
 void InitPanel::disconnected(KWebSocketClient &ws) {
   spdlog::debug("init panel disconnected");
   std::lock_guard<std::mutex> lock(lv_lock);
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_move_foreground(cont);
+  lv_obj_set_hidden(cont, false);
+  lv_obj_move_to_index(cont, -1);
 }
 
 void InitPanel::set_message(const char *message) {

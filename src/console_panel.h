@@ -23,27 +23,27 @@ class ConsolePanel {
   void handle_clear_input(lv_event_t *e);
 
   static void _handle_back(lv_event_t *e) {
-    auto *panel = static_cast<ConsolePanel *>(e->user_data);
+    auto *panel = static_cast<ConsolePanel *>(lv_event_get_user_data(e));
     panel->handle_back(e);
   }
 
   static void _handle_kb_input(lv_event_t *e) {
-    auto *panel = static_cast<ConsolePanel *>(e->user_data);
+    auto *panel = static_cast<ConsolePanel *>(lv_event_get_user_data(e));
     panel->handle_kb_input(e);
   }
 
   static void _handle_select_macro(lv_event_t *e) {
-    auto *panel = static_cast<ConsolePanel *>(e->user_data);
+    auto *panel = static_cast<ConsolePanel *>(lv_event_get_user_data(e));
     panel->handle_select_macro(e);
   }
 
   static void _handle_send_macro(lv_event_t *e) {
-    auto *panel = static_cast<ConsolePanel *>(e->user_data);
+    auto *panel = static_cast<ConsolePanel *>(lv_event_get_user_data(e));
     panel->handle_send_macro(e);
   }
 
   static void _handle_clear_input(lv_event_t *e) {
-    auto *panel = static_cast<ConsolePanel *>(e->user_data);
+    auto *panel = static_cast<ConsolePanel *>(lv_event_get_user_data(e));
     panel->handle_clear_input(e);
   }
 

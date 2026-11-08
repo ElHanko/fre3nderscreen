@@ -26,32 +26,32 @@ class BedMeshPanel : public NotifyConsumer {
   void mesh_draw_cb(lv_event_t *event);
 
   static void _handle_callback(lv_event_t *event) {
-    auto *panel = static_cast<BedMeshPanel *>(event->user_data);
+    auto *panel = static_cast<BedMeshPanel *>(lv_event_get_user_data(event));
     panel->handle_callback(event);
   }
 
   static void _handle_profile_action(lv_event_t *event) {
-    auto *panel = static_cast<BedMeshPanel *>(event->user_data);
+    auto *panel = static_cast<BedMeshPanel *>(lv_event_get_user_data(event));
     panel->handle_profile_action(event);
   }
 
   static void _handle_prompt_save(lv_event_t *event) {
-    auto *panel = static_cast<BedMeshPanel *>(event->user_data);
+    auto *panel = static_cast<BedMeshPanel *>(lv_event_get_user_data(event));
     panel->handle_prompt_save(event);
   }
 
   static void _handle_prompt_cancel(lv_event_t *event) {
-    auto *panel = static_cast<BedMeshPanel *>(event->user_data);
+    auto *panel = static_cast<BedMeshPanel *>(lv_event_get_user_data(event));
     panel->handle_prompt_cancel(event);
   }
 
   static void _handle_kb_input(lv_event_t *event) {
-    auto *panel = static_cast<BedMeshPanel *>(event->user_data);
+    auto *panel = static_cast<BedMeshPanel *>(lv_event_get_user_data(event));
     panel->handle_kb_input(event);
   }
 
   static void _mesh_draw_cb(lv_event_t *event) {
-    auto *panel = static_cast<BedMeshPanel *>(event->user_data);
+    auto *panel = static_cast<BedMeshPanel *>(lv_event_get_user_data(event));
     panel->mesh_draw_cb(event);
   }
 

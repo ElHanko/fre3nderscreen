@@ -14,7 +14,7 @@ constexpr uint32_t COLOR_TEXT = 0xFFFFFF;
 
 void style_transparent(lv_obj_t *obj)
 {
-  lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(obj, false);
   lv_obj_set_style_pad_all(obj, 0, 0);
   lv_obj_set_style_border_width(obj, 0, 0);
   lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
@@ -22,7 +22,7 @@ void style_transparent(lv_obj_t *obj)
 
 void style_button(lv_obj_t *button)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
@@ -43,7 +43,7 @@ void style_button(lv_obj_t *button)
 Numpad::Numpad(lv_obj_t *parent)
   : edit_cont(lv_obj_create(parent))
   , header_cont(lv_obj_create(edit_cont))
-  , back_btn(lv_btn_create(header_cont))
+  , back_btn(lv_button_create(header_cont))
   , title_label(lv_label_create(header_cont))
   , input(lv_textarea_create(edit_cont))
   , kb(lv_keyboard_create(edit_cont))
@@ -51,21 +51,21 @@ Numpad::Numpad(lv_obj_t *parent)
 {
   spdlog::trace("creating global numpad");
 
-  lv_obj_add_flag(edit_cont, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(edit_cont, true);
   lv_obj_set_size(edit_cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(edit_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(edit_cont, false);
   lv_obj_set_style_pad_all(edit_cont, 8, 0);
   lv_obj_set_style_pad_row(edit_cont, 8, 0);
   lv_obj_set_style_border_width(edit_cont, 0, 0);
   lv_obj_set_style_bg_color(edit_cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     42,
     58,
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -128,11 +128,11 @@ Numpad::Numpad(lv_obj_t *parent)
     "7", "8", "9", "\n",
     LV_SYMBOL_BACKSPACE, "0", LV_SYMBOL_OK, nullptr
   };
-  static const lv_btnmatrix_ctrl_t kb_ctrl[] = {
-    1, 1, 1,
-    1, 1, 1,
-    1, 1, 1,
-    1, 1, 1
+  static const lv_buttonmatrix_ctrl_t kb_ctrl[] = {
+    LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1,
+    LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1,
+    LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1,
+    LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1
   };
 
   lv_keyboard_set_map(
@@ -143,7 +143,7 @@ Numpad::Numpad(lv_obj_t *parent)
   lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_USER_1);
   lv_keyboard_set_textarea(kb, input);
 
-  lv_obj_clear_flag(kb, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(kb, false);
   lv_obj_set_style_bg_color(kb, lv_color_hex(COLOR_BG), LV_PART_MAIN);
   lv_obj_set_style_border_width(kb, 0, LV_PART_MAIN);
   lv_obj_set_style_pad_all(kb, 2, LV_PART_MAIN);
@@ -185,7 +185,7 @@ Numpad::Numpad(lv_obj_t *parent)
 Numpad::~Numpad()
 {
   if (edit_cont != nullptr) {
-    lv_obj_del(edit_cont);
+    lv_obj_delete(edit_cont);
     edit_cont = nullptr;
   }
 }
@@ -197,8 +197,8 @@ void Numpad::set_callback(std::function<void(double)> cb)
 
 void Numpad::close()
 {
-  lv_obj_add_flag(edit_cont, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_move_background(edit_cont);
+  lv_obj_set_hidden(edit_cont, true);
+  lv_obj_move_to_index(edit_cont, 0);
   lv_textarea_set_text(input, "");
 }
 
@@ -235,7 +235,7 @@ void Numpad::foreground_reset()
   spdlog::trace("showing numpad");
   lv_textarea_set_text(input, "");
   lv_keyboard_set_textarea(kb, input);
-  lv_obj_clear_flag(edit_cont, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_move_foreground(edit_cont);
-  lv_obj_add_state(input, LV_STATE_FOCUSED);
+  lv_obj_set_hidden(edit_cont, false);
+  lv_obj_move_to_index(edit_cont, -1);
+  lv_obj_set_focused(input, true);
 }

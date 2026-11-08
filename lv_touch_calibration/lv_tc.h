@@ -34,12 +34,11 @@ typedef struct {
  * GLOBAL PROTOTYPES
  **********************/
 
-/**
- * Initialize a calibrated touch input driver.
- * @param indevDrv pointer to an input driver
- * @param readCb function pointer to read input driver data
- */
-void lv_tc_indev_drv_init(lv_indev_drv_t *indevDrv, void (*readCb)(struct _lv_indev_drv_t *indevDrv, lv_indev_data_t *data));
+/** Wrap the native reader for the single touchscreen, retaining driver_data. */
+void lv_tc_indev_init(lv_indev_t *indev);
+
+/** Drain native input without applying calibration or dispatching UI events. */
+void lv_tc_indev_read_raw(lv_indev_t *indev, lv_indev_data_t *data);
 
 /**
  * Register a calibration screen to the modified input driver.

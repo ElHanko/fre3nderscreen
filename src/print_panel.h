@@ -28,22 +28,22 @@ class PrintPanel : public NotifyConsumer {
   void handle_metadata(const std::string &path, json &data);
 
   static void _handle_file_table(lv_event_t *event) {
-    auto *panel = static_cast<PrintPanel *>(event->user_data);
+    auto *panel = static_cast<PrintPanel *>(lv_event_get_user_data(event));
     panel->handle_file_table(event);
   }
 
   static void _handle_toolbar(lv_event_t *event) {
-    auto *panel = static_cast<PrintPanel *>(event->user_data);
+    auto *panel = static_cast<PrintPanel *>(lv_event_get_user_data(event));
     panel->handle_toolbar(event);
   }
 
   static void _handle_print(lv_event_t *event) {
-    auto *panel = static_cast<PrintPanel *>(event->user_data);
+    auto *panel = static_cast<PrintPanel *>(lv_event_get_user_data(event));
     panel->handle_print(event);
   }
 
   static void _handle_status(lv_event_t *event) {
-    auto *panel = static_cast<PrintPanel *>(event->user_data);
+    auto *panel = static_cast<PrintPanel *>(lv_event_get_user_data(event));
     panel->handle_status(event);
   }
 

@@ -12,7 +12,7 @@ constexpr uint32_t COLOR_MUTED = 0xB8C0C5;
 
 void style_button(lv_obj_t *button)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
@@ -24,7 +24,7 @@ void style_button(lv_obj_t *button)
 
 void style_transparent_container(lv_obj_t *cont)
 {
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 0, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
@@ -33,26 +33,26 @@ void style_transparent_container(lv_obj_t *cont)
 } // namespace
 
 WifiPanel::WifiPanel(std::mutex &)
-  : cont(lv_obj_create(lv_scr_act()))
+  : cont(lv_obj_create(lv_screen_active()))
   , header_cont(lv_obj_create(cont))
-  , back_btn(lv_btn_create(header_cont))
+  , back_btn(lv_button_create(header_cont))
   , title_label(lv_label_create(header_cont))
   , placeholder_card(lv_obj_create(cont))
 {
-  lv_obj_move_background(cont);
+  lv_obj_move_to_index(cont, 0);
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 8, 0);
   lv_obj_set_style_pad_row(cont, 8, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_color(cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     42,
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -89,7 +89,7 @@ WifiPanel::WifiPanel(std::mutex &)
       LV_GRID_ALIGN_STRETCH, 0, 1,
       LV_GRID_ALIGN_START, 1, 1);
   lv_obj_set_height(placeholder_card, 132);
-  lv_obj_clear_flag(placeholder_card, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(placeholder_card, false);
   lv_obj_set_style_pad_all(placeholder_card, 14, 0);
   lv_obj_set_style_pad_row(placeholder_card, 8, 0);
   lv_obj_set_style_radius(placeholder_card, 8, 0);
@@ -124,7 +124,7 @@ WifiPanel::WifiPanel(std::mutex &)
   lv_obj_t *description = lv_label_create(placeholder_card);
   lv_label_set_text(description, "Fre3nder API integration pending");
   lv_obj_set_width(description, LV_PCT(100));
-  lv_label_set_long_mode(description, LV_LABEL_LONG_WRAP);
+  lv_label_set_long_mode(description, LV_LABEL_LONG_MODE_WRAP);
   lv_obj_set_style_text_align(description, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_font(description, &lv_font_montserrat_12, 0);
   lv_obj_set_style_text_color(description, lv_color_hex(COLOR_MUTED), 0);
@@ -133,14 +133,14 @@ WifiPanel::WifiPanel(std::mutex &)
 WifiPanel::~WifiPanel()
 {
   if (cont != nullptr) {
-    lv_obj_del(cont);
+    lv_obj_delete(cont);
     cont = nullptr;
   }
 }
 
 void WifiPanel::foreground()
 {
-  lv_obj_move_foreground(cont);
+  lv_obj_move_to_index(cont, -1);
 }
 
 void WifiPanel::handle_back_btn(lv_event_t *event)
@@ -149,7 +149,7 @@ void WifiPanel::handle_back_btn(lv_event_t *event)
     return;
   }
 
-  if (lv_event_get_current_target(event) == back_btn) {
-    lv_obj_move_background(cont);
+  if (lv_event_get_current_target_obj(event) == back_btn) {
+    lv_obj_move_to_index(cont, 0);
   }
 }

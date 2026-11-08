@@ -28,17 +28,17 @@ class MacroItem {
   void show();
 
   static void _handle_kb_input(lv_event_t *e) {
-    MacroItem *panel = (MacroItem*)e->user_data;
+    MacroItem *panel = (MacroItem*)lv_event_get_user_data(e);
     panel->handle_kb_input(e);
   };
 
   static void _handle_send_macro(lv_event_t *e) {
-    MacroItem *panel = (MacroItem*)e->user_data;
+    MacroItem *panel = (MacroItem*)lv_event_get_user_data(e);
     panel->handle_send_macro(e);
   };
 
   static void _handle_hide_show(lv_event_t *e) {
-    MacroItem *panel = (MacroItem*)e->user_data;
+    MacroItem *panel = (MacroItem*)lv_event_get_user_data(e);
     panel->handle_hide_show(e);
   };
 

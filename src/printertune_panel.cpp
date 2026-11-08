@@ -13,7 +13,7 @@ constexpr uint32_t COLOR_TEXT = 0xFFFFFF;
 
 void style_transparent(lv_obj_t *obj)
 {
-  lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(obj, false);
   lv_obj_set_style_pad_all(obj, 0, 0);
   lv_obj_set_style_border_width(obj, 0, 0);
   lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
@@ -21,7 +21,7 @@ void style_transparent(lv_obj_t *obj)
 
 void style_button(lv_obj_t *button)
 {
-  lv_obj_clear_flag(button, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(button, false);
   lv_obj_set_style_bg_color(button, lv_color_hex(COLOR_CARD), 0);
   lv_obj_set_style_border_width(button, 1, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(COLOR_BORDER), 0);
@@ -43,34 +43,34 @@ void style_button(lv_obj_t *button)
 PrinterTunePanel::PrinterTunePanel(KWebSocketClient &client,
                                    std::mutex &lock,
                                    FineTunePanel &finetune)
-  : cont(lv_obj_create(lv_scr_act()))
+  : cont(lv_obj_create(lv_screen_active()))
   , header_cont(lv_obj_create(cont))
-  , back_btn(lv_btn_create(header_cont))
+  , back_btn(lv_button_create(header_cont))
   , title_label(lv_label_create(header_cont))
   , cards_cont(lv_obj_create(cont))
   , bedmesh_panel(client, lock)
   , finetune_panel(finetune)
   , limits_panel(client, lock)
   , power_panel(client, lock)
-  , bedmesh_btn(lv_btn_create(cards_cont))
-  , finetune_btn(lv_btn_create(cards_cont))
-  , limits_btn(lv_btn_create(cards_cont))
-  , power_devices_btn(lv_btn_create(cards_cont))
+  , bedmesh_btn(lv_button_create(cards_cont))
+  , finetune_btn(lv_button_create(cards_cont))
+  , limits_btn(lv_button_create(cards_cont))
+  , power_devices_btn(lv_button_create(cards_cont))
 {
-  lv_obj_move_background(cont);
+  lv_obj_move_to_index(cont, 0);
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 8, 0);
   lv_obj_set_style_pad_row(cont, 8, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
   lv_obj_set_style_bg_color(cont, lv_color_hex(COLOR_BG), 0);
 
-  static lv_coord_t root_rows[] = {
+  static int32_t root_rows[] = {
     42,
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t root_cols[] = {
+  static int32_t root_cols[] = {
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
@@ -110,12 +110,12 @@ PrinterTunePanel::PrinterTunePanel(KWebSocketClient &client,
   lv_obj_set_style_pad_row(cards_cont, 8, 0);
   lv_obj_set_style_pad_column(cards_cont, 8, 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     LV_GRID_FR(1),
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
@@ -164,7 +164,7 @@ PrinterTunePanel::PrinterTunePanel(KWebSocketClient &client,
 
     lv_obj_t *label = lv_label_create(entry.button);
     lv_label_set_text(label, entry.text);
-    lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_MODE_WRAP);
     lv_obj_set_width(label, LV_PCT(100));
     lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_font(label, &lv_font_montserrat_12, 0);
@@ -175,7 +175,7 @@ PrinterTunePanel::PrinterTunePanel(KWebSocketClient &client,
 PrinterTunePanel::~PrinterTunePanel()
 {
   if (cont != nullptr) {
-    lv_obj_del(cont);
+    lv_obj_delete(cont);
     cont = nullptr;
   }
 }
@@ -197,7 +197,7 @@ PowerPanel &PrinterTunePanel::get_power_panel()
 
 void PrinterTunePanel::foreground()
 {
-  lv_obj_move_foreground(cont);
+  lv_obj_move_to_index(cont, -1);
 }
 
 void PrinterTunePanel::init(json &j)
@@ -211,10 +211,10 @@ void PrinterTunePanel::handle_callback(lv_event_t *event)
     return;
   }
 
-  lv_obj_t *button = lv_event_get_current_target(event);
+  lv_obj_t *button = lv_event_get_current_target_obj(event);
 
   if (button == back_btn) {
-    lv_obj_move_background(cont);
+    lv_obj_move_to_index(cont, 0);
   } else if (button == finetune_btn) {
     spdlog::trace("tune finetune pressed");
     finetune_panel.foreground();

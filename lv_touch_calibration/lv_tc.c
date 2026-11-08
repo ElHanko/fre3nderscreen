@@ -19,7 +19,7 @@
  *  STATIC PROTOTYPES
  **********************/
 
-static void lv_tc_indev_drv_read_cb(lv_indev_drv_t *indevDrv, lv_indev_data_t *data);
+static void lv_tc_indev_drv_read_cb(lv_indev_t *indev, lv_indev_data_t *data);
 static lv_point_t lv_tc_transform_point_for_indev(lv_point_t point);
 static lv_point_t lv_tc_unrotate_point(lv_point_t point);
 
@@ -39,11 +39,16 @@ static void (*registeredSaveCb)(lv_tc_coeff_t coeff) = NULL;
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_tc_indev_drv_init(lv_indev_drv_t *indevDrv, void (*readCb)(lv_indev_drv_t *indevDrv, lv_indev_data_t *data)) {
-    lv_indev_drv_init(indevDrv);
-    indevDrv->type = LV_INDEV_TYPE_POINTER;
-    indevDrv->read_cb = lv_tc_indev_drv_read_cb;
-    indevDrv->user_data = readCb;
+static lv_indev_read_cb_t native_read_cb;
+
+void lv_tc_indev_init(lv_indev_t *indev) {
+    native_read_cb = lv_indev_get_read_cb(indev);
+    lv_indev_set_read_cb(indev, lv_tc_indev_drv_read_cb);
+}
+
+void lv_tc_indev_read_raw(lv_indev_t *indev, lv_indev_data_t *data) {
+    lv_indev_read_cb_t read_cb = native_read_cb ? native_read_cb : lv_indev_get_read_cb(indev);
+    read_cb(indev, data);
 }
 
 void _lv_tc_register_input_cb(lv_obj_t *screenObj, bool (*inputCb)(lv_obj_t *screenObj, lv_indev_data_t *data)) {
@@ -176,26 +181,26 @@ static lv_point_t lv_tc_transform_point_for_indev(lv_point_t point) {
 }
 
 static lv_point_t lv_tc_unrotate_point(lv_point_t point) {
-    lv_disp_t *disp = lv_disp_get_default();
+    lv_display_t *disp = lv_display_get_default();
     lv_point_t transformedPoint = point;
-    const lv_coord_t x = point.x;
-    const lv_coord_t y = point.y;
+    const int32_t x = point.x;
+    const int32_t y = point.y;
 
     // LVGL rotates pointer coordinates after the input driver's read callback,
     // so return the inverse rotation here.
-    switch (disp->driver->rotated) {
-        case LV_DISP_ROT_NONE:
+    switch (lv_display_get_rotation(disp)) {
+        case LV_DISPLAY_ROTATION_0:
             break;
-        case LV_DISP_ROT_90:
+        case LV_DISPLAY_ROTATION_90:
             transformedPoint.x = y;
-            transformedPoint.y = lv_disp_get_hor_res(NULL) - x - 1;
+            transformedPoint.y = lv_display_get_horizontal_resolution(NULL) - x - 1;
             break;
-        case LV_DISP_ROT_180:
-            transformedPoint.x = lv_disp_get_hor_res(NULL) - x - 1;
-            transformedPoint.y = lv_disp_get_ver_res(NULL) - y - 1;
+        case LV_DISPLAY_ROTATION_180:
+            transformedPoint.x = lv_display_get_horizontal_resolution(NULL) - x - 1;
+            transformedPoint.y = lv_display_get_vertical_resolution(NULL) - y - 1;
             break;
-        case LV_DISP_ROT_270:
-            transformedPoint.x = lv_disp_get_ver_res(NULL) - y - 1;
+        case LV_DISPLAY_ROTATION_270:
+            transformedPoint.x = lv_display_get_vertical_resolution(NULL) - y - 1;
             transformedPoint.y = x;
             break;
     }
@@ -207,14 +212,11 @@ static lv_point_t lv_tc_unrotate_point(lv_point_t point) {
  *   STATIC FUNCTIONS
  **********************/
 
-static void lv_tc_indev_drv_read_cb(lv_indev_drv_t *indevDrv, lv_indev_data_t *data) {
-    if(!indevDrv->user_data) return;
-
-    //Call the actual indev read callback
-    ((void (*)(lv_indev_drv_t*, lv_indev_data_t*))indevDrv->user_data)(indevDrv, data);
+static void lv_tc_indev_drv_read_cb(lv_indev_t *indev, lv_indev_data_t *data) {
+    lv_tc_indev_read_raw(indev, data);
 
     //Pass the results to an ongoing calibration if there is one
-    if(registeredTCScreen && registeredInputCb && registeredTCScreen == lv_scr_act()) {
+    if(registeredTCScreen && registeredInputCb && registeredTCScreen == lv_screen_active()) {
         if(!registeredInputCb(registeredTCScreen, data)) {
             //Override state and point if the input has been handled by the registered calibration screen
             data->state = LV_INDEV_STATE_RELEASED;

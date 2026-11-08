@@ -83,7 +83,7 @@ lv_obj_t *label(lv_obj_t *parent, const std::string &text, uint32_t color = WHIT
 {
   lv_obj_t *item = lv_label_create(parent);
   lv_obj_set_width(item, LV_PCT(100));
-  lv_label_set_long_mode(item, LV_LABEL_LONG_WRAP);
+  lv_label_set_long_mode(item, LV_LABEL_LONG_MODE_WRAP);
   lv_obj_set_style_text_color(item, lv_color_hex(color), 0);
   lv_obj_set_style_text_font(item, &lv_font_montserrat_12, 0);
   lv_label_set_text(item, text.c_str());
@@ -92,14 +92,14 @@ lv_obj_t *label(lv_obj_t *parent, const std::string &text, uint32_t color = WHIT
 } // namespace
 
 OtaPanel::OtaPanel()
-  : cont(lv_obj_create(lv_scr_act())), back_btn(lv_btn_create(cont)),
-    refresh_btn(lv_btn_create(cont)), content(lv_obj_create(cont)),
+  : cont(lv_obj_create(lv_screen_active())), back_btn(lv_button_create(cont)),
+    refresh_btn(lv_button_create(cont)), content(lv_obj_create(cont)),
     message(nullptr), details(nullptr), packages(nullptr), choices(nullptr),
     actions(nullptr), timer(nullptr)
 {
-  lv_obj_move_background(cont);
+  lv_obj_move_to_index(cont, 0);
   lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(cont, false);
   lv_obj_set_style_pad_all(cont, 8, 0);
   lv_obj_set_style_bg_color(cont, lv_color_hex(BG), 0);
   lv_obj_set_style_border_width(cont, 0, 0);
@@ -127,7 +127,7 @@ OtaPanel::OtaPanel()
   lv_obj_set_style_text_color(title, lv_color_hex(WHITE), 0);
   lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 7);
 
-  lv_obj_set_size(content, LV_PCT(100), lv_disp_get_ver_res(NULL) - 58);
+  lv_obj_set_size(content, LV_PCT(100), lv_display_get_vertical_resolution(NULL) - 58);
   lv_obj_align(content, LV_ALIGN_BOTTOM_MID, 0, 0);
   lv_obj_set_style_pad_all(content, 9, 0);
   lv_obj_set_style_pad_row(content, 8, 0);
@@ -155,14 +155,14 @@ OtaPanel::OtaPanel()
 }
 OtaPanel::~OtaPanel()
 {
-  if (timer) lv_timer_del(timer);
+  if (timer) lv_timer_delete(timer);
   if (worker.joinable()) worker.join();
-  lv_obj_del(cont);
+  lv_obj_delete(cont);
 }
 void OtaPanel::foreground()
 {
   open = true;
-  lv_obj_move_foreground(cont);
+  lv_obj_move_to_index(cont, -1);
   refresh();
 }
 void OtaPanel::start(bool is_status, std::string operation,
@@ -474,7 +474,7 @@ void OtaPanel::poll()
 void OtaPanel::add_button(lv_obj_t *parent, const std::string &text,
                           Action action, const std::string &value, bool dangerous)
 {
-  lv_obj_t *button = lv_btn_create(parent);
+  lv_obj_t *button = lv_button_create(parent);
   lv_obj_set_width(button, LV_PCT(100));
   lv_obj_set_height(button, 48);
   lv_obj_set_style_pad_all(button, 8, 0);
@@ -687,13 +687,13 @@ void OtaPanel::take_action(Action action)
 void OtaPanel::handle(lv_event_t *event)
 {
   if (lv_event_get_code(event) != LV_EVENT_CLICKED) return;
-  lv_obj_t *target = lv_event_get_current_target(event);
+  lv_obj_t *target = lv_event_get_current_target_obj(event);
   if (target == back_btn) {
     open = false;
     update_active = false; // Do not resume a partially completed update on return.
     check_after_verify = false;
     armed.clear();
-    lv_obj_move_background(cont);
+    lv_obj_move_to_index(cont, 0);
     return;
   }
   if (target == refresh_btn) { if (!busy) { armed.clear(); refresh(); } return; }
@@ -723,9 +723,9 @@ void OtaPanel::handle(lv_event_t *event)
 }
 void OtaPanel::event_callback(lv_event_t *event)
 {
-  static_cast<OtaPanel *>(event->user_data)->handle(event);
+  static_cast<OtaPanel *>(lv_event_get_user_data(event))->handle(event);
 }
 void OtaPanel::timer_callback(lv_timer_t *timer)
 {
-  static_cast<OtaPanel *>(timer->user_data)->poll();
+  static_cast<OtaPanel *>(lv_timer_get_user_data(timer))->poll();
 }

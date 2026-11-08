@@ -1,7 +1,7 @@
 #include "virtual_terminal.h"
 
 #ifndef SIMULATOR
-#include "lv_drivers/display/fbdev.h"
+#include <linux/fb.h>
 #include <cerrno>
 #include <csignal>
 #include <fcntl.h>
@@ -14,6 +14,8 @@
 
 namespace {
 int terminal = -1;
+int framebuffer = -1;
+lv_display_flush_cb_t framebuffer_flush = nullptr;
 bool active = false;
 volatile sig_atomic_t release_pending = 0;
 volatile sig_atomic_t acquire_pending = 0;
@@ -31,6 +33,25 @@ void check(int result) {
 }
 
 namespace VirtualTerminal {
+void attach_display(lv_display_t *display, const char *framebuffer_path) {
+    framebuffer = open(framebuffer_path, O_RDWR | O_CLOEXEC);
+    check(framebuffer);
+    framebuffer_flush = lv_display_get_flush_cb(display);
+    lv_display_set_flush_cb(display, flush);
+}
+
+void blank(bool enabled) {
+    (void)ioctl(framebuffer, FBIOBLANK, enabled ? FB_BLANK_NORMAL : FB_BLANK_UNBLANK);
+    if (!enabled) {
+        struct fb_var_screeninfo info = {};
+        if (ioctl(framebuffer, FBIOGET_VSCREENINFO, &info) == 0) {
+            info.xoffset = 0;
+            info.yoffset = 0;
+            (void)ioctl(framebuffer, FBIOPAN_DISPLAY, &info);
+        }
+    }
+}
+
 void init(const char *path) {
     if (path == nullptr || path[0] == '\0')
         throw std::runtime_error("display VT is required");
@@ -85,6 +106,10 @@ void acknowledge(bool acquired) {
 
 void shutdown() {
     active = false;
+    if (framebuffer >= 0) {
+        close(framebuffer);
+        framebuffer = -1;
+    }
     if (terminal < 0) return;
     struct vt_mode mode = {};
     mode.mode = VT_AUTO;
@@ -97,9 +122,9 @@ void shutdown() {
     terminal = -1;
 }
 
-void flush(lv_disp_drv_t *driver, const lv_area_t *area, lv_color_t *pixels) {
-    if (active) fbdev_flush(driver, area, pixels);
-    else lv_disp_flush_ready(driver);
+void flush(lv_display_t *display, const lv_area_t *area, uint8_t *pixels) {
+    if (active) framebuffer_flush(display, area, pixels);
+    else lv_display_flush_ready(display);
 }
 }
 #endif

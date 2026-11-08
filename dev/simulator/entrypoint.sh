@@ -38,8 +38,7 @@ prepare_source() {
         "$SOURCE_DIR/" "$WORK_DIR/"
 
     for required in \
-        lvgl/lvgl.mk \
-        lv_drivers/lv_drivers.mk \
+        lvgl/CMakeLists.txt \
         libhv/Makefile \
         spdlog/CMakeLists.txt
     do

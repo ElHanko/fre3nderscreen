@@ -21,13 +21,13 @@ constexpr uint32_t COLOR_MUTED = 0xB8C0C5;
 
 FilePanel::FilePanel(lv_obj_t *parent)
   : file_cont(lv_obj_create(parent))
-  , thumbnail(lv_img_create(file_cont))
+  , thumbnail(lv_image_create(file_cont))
   , placeholder(lv_label_create(file_cont))
   , fname_label(lv_label_create(file_cont))
   , detail_label(lv_label_create(file_cont))
 {
   lv_obj_set_size(file_cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(file_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(file_cont, false);
   lv_obj_set_style_pad_all(file_cont, 8, 0);
   lv_obj_set_style_pad_row(file_cont, 4, 0);
   lv_obj_set_style_pad_column(file_cont, 8, 0);
@@ -36,12 +36,12 @@ FilePanel::FilePanel(lv_obj_t *parent)
   lv_obj_set_style_border_color(file_cont, lv_color_hex(COLOR_BORDER), 0);
   lv_obj_set_style_bg_color(file_cont, lv_color_hex(COLOR_CARD), 0);
 
-  static lv_coord_t rows[] = {
+  static int32_t rows[] = {
     22,
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
   };
-  static lv_coord_t cols[] = {
+  static int32_t cols[] = {
     66,
     LV_GRID_FR(1),
     LV_GRID_TEMPLATE_LAST
@@ -53,7 +53,7 @@ FilePanel::FilePanel(lv_obj_t *parent)
       LV_GRID_ALIGN_STRETCH, 0, 2,
       LV_GRID_ALIGN_CENTER, 0, 1);
   lv_obj_set_width(fname_label, LV_PCT(100));
-  lv_label_set_long_mode(fname_label, LV_LABEL_LONG_SCROLL);
+  lv_label_set_long_mode(fname_label, LV_LABEL_LONG_MODE_SCROLL);
   lv_obj_set_style_text_font(fname_label, &lv_font_montserrat_12, 0);
   lv_obj_set_style_text_color(fname_label, lv_color_hex(COLOR_TEXT), 0);
 
@@ -70,7 +70,7 @@ FilePanel::FilePanel(lv_obj_t *parent)
       LV_GRID_ALIGN_CENTER, 0, 1,
       LV_GRID_ALIGN_CENTER, 1, 1);
 
-  lv_label_set_long_mode(detail_label, LV_LABEL_LONG_WRAP);
+  lv_label_set_long_mode(detail_label, LV_LABEL_LONG_MODE_WRAP);
   lv_obj_set_style_text_font(detail_label, &lv_font_montserrat_10, 0);
   lv_obj_set_style_text_color(detail_label, lv_color_hex(COLOR_MUTED), 0);
   lv_obj_set_grid_cell(
@@ -88,8 +88,8 @@ FilePanel::~FilePanel()
 
 void FilePanel::show_placeholder()
 {
-  lv_obj_add_flag(thumbnail, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_clear_flag(placeholder, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(thumbnail, true);
+  lv_obj_set_hidden(placeholder, false);
 }
 
 void FilePanel::clear()
@@ -147,18 +147,18 @@ void FilePanel::refresh_view(json &j, const std::string &gcode_path)
     return;
   }
 
-  lv_img_set_src(thumbnail, ("A:" + thumb_detail.first).c_str());
+  lv_image_set_src(thumbnail, ("A:" + thumb_detail.first).c_str());
 
   if (thumb_detail.second > 0) {
     const uint32_t zoom =
         static_cast<uint32_t>((64.0 / static_cast<double>(thumb_detail.second)) * 256.0);
-    lv_img_set_zoom(thumbnail, zoom);
+    lv_image_set_scale(thumbnail, zoom);
   } else {
-    lv_img_set_zoom(thumbnail, 256);
+    lv_image_set_scale(thumbnail, 256);
   }
 
-  lv_obj_add_flag(placeholder, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_clear_flag(thumbnail, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(placeholder, true);
+  lv_obj_set_hidden(thumbnail, false);
 }
 
 lv_obj_t *FilePanel::get_container()

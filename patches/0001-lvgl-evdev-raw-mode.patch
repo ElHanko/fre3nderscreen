@@ -1,0 +1,65 @@
+LVGL v9.6.0 (80ca777e37a2b176770726a02e07a6fb79ef0b39), MIT.
+Source: https://github.com/lvgl/lvgl/tree/v9.6.0
+
+Opt-in raw pointer coordinates for Fre3nderScreen's existing six-coefficient
+affine touch calibration. Preserve the native evdev reader and its driver_data;
+leave upstream min/max scaling and clamping unchanged when raw mode is disabled.
+
+diff --git a/include/lvgl/drivers/indev/lv_evdev.h b/include/lvgl/drivers/indev/lv_evdev.h
+index ef604c262..fcea249e0 100644
+--- a/include/lvgl/drivers/indev/lv_evdev.h
++++ b/include/lvgl/drivers/indev/lv_evdev.h
+@@ -91,6 +91,14 @@ void lv_evdev_set_swap_axes(lv_indev_t * indev, bool swap_axes);
+  */
+ void lv_evdev_set_calibration(lv_indev_t * indev, int min_x, int min_y, int max_x, int max_y);
+
++/**
++ * Return pointer coordinates without scaling/clamping, after optional axis swap.
++ * Disabled by default. Allows an application-provided affine calibration.
++ * @param indev evdev input device
++ * @param enabled whether to return raw pointer coordinates
++ */
++void lv_evdev_set_raw_mode(lv_indev_t * indev, bool enabled);
++
+ /**
+  * Returns the status indicating whether an LV_KEY could not be processed.
+  * @param e         pointer to an event
+diff --git a/src/drivers/evdev/lv_evdev.c b/src/drivers/evdev/lv_evdev.c
+index 518d400c1..25f06b5b8 100644
+--- a/src/drivers/evdev/lv_evdev.c
++++ b/src/drivers/evdev/lv_evdev.c
+@@ -50,6 +50,7 @@ typedef struct {
+     lv_evdev_type_t type;
+     /*Config*/
+     bool swap_axes;
++    bool raw_mode;
+     int min_x;
+     int min_y;
+     int max_x;
+@@ -132,6 +133,11 @@ static lv_point_t _evdev_process_pointer(lv_indev_t * indev, int x, int y)
+     int swapped_x = dsc->swap_axes ? y : x;
+     int swapped_y = dsc->swap_axes ? x : y;
+
++    if(dsc->raw_mode) {
++        lv_point_t point = { swapped_x, swapped_y };
++        return point;
++    }
++
+     int offset_x = disp->offset_x;
+     int offset_y = disp->offset_y;
+     int width = disp->hor_res;
+@@ -708,6 +714,14 @@ void lv_evdev_set_calibration(lv_indev_t * indev, int min_x, int min_y, int max_
+     dsc->max_y = max_y;
+ }
+
++void lv_evdev_set_raw_mode(lv_indev_t * indev, bool enabled)
++{
++    LV_CHECK_ARG(indev != NULL, return);
++    lv_evdev_t * dsc = lv_indev_get_driver_data(indev);
++    LV_CHECK_ARG(dsc != NULL, return);
++    dsc->raw_mode = enabled;
++}
++
+ bool lv_evdev_is_raw_key(lv_event_t * e)
+ {
+     LV_CHECK_ARG(e != NULL, return false);
