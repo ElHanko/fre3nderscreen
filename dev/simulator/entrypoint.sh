@@ -79,6 +79,8 @@ build_simulator() {
         make -j"$(nproc)" build
         touch /work/.simulator-built
     else
+        # Refresh the preserved spdlog archive after synchronizing its sources.
+        make -j"$(nproc)" libspdlog.a
         make -j"$(nproc)"
     fi
 }

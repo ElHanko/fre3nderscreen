@@ -24,9 +24,9 @@ WARNINGS		:= -Wall -Wextra -Wno-unused-function -Wno-error=strict-prototypes -Wp
 					-Wunreachable-code -Wno-switch-default -Wreturn-type -Wmultichar -Wformat-security -Wno-sign-compare
 CFLAGS 			?= -O3 -g0 -MD -MP -I$(LVGL_DIR)/ $(WARNINGS) 
 ifdef CROSS_COMPILE
-LDFLAGS 		?= -static -lm -Llibhv/lib -Lspdlog/build -Llvgl/build/lib -l:libhv.a -latomic -lpthread -lstdc++fs -l:libspdlog.a -l:liblvgl.a
+LDFLAGS 		?= -static -lm -Llibhv/lib -Lspdlog/build -Llvgl/build -l:libhv.a -latomic -lpthread -lstdc++fs -l:libspdlog.a -l:liblvgl.a
 else
-LDFLAGS 		?= -lm -Llibhv/lib -Lspdlog/build -Llvgl/build/lib -l:libhv.a -latomic -lpthread -lstdc++fs -l:libspdlog.a -l:liblvgl.a
+LDFLAGS 		?= -lm -Llibhv/lib -Lspdlog/build -Llvgl/build -l:libhv.a -latomic -lpthread -lstdc++fs -l:libspdlog.a -l:liblvgl.a
 endif
 BIN 			= fre3nderscreen
 BUILD_DIR 		= ./build
