@@ -104,6 +104,18 @@ layout and formatting, **not** production permissions or on-device behavior.
 The failure state remains testable by stopping the mock or using an invalid
 socket path in a separate development run.
 
+## Simulated timezone settings
+
+System → Timezone uses the synthetic Management endpoint with the container's
+system IANA data (`tzdata`). Selection changes only in-memory mock state;
+active remains `Etc/UTC`, and no host timezone files or clock are changed.
+Set `FRE3NDERSCREEN_MOCK_TIMEZONE_UNSUPPORTED=1` for the mock process to simulate
+an older Core without this endpoint. The Screen must report unsupported
+settings and keep its timezone controls disabled. The Python Management tests
+exercise the catalog, complete identifiers, rejected selections and the
+active/configured split without a C++ build. The actual LVGL fixture in
+`tests/test_timezone_panel.cpp` requires explicit build authorization.
+
 ## Simulated Apps management
 
 The native Apps page uses the same Unix socket as System. The simulator mock

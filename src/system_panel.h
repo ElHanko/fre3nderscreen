@@ -2,6 +2,7 @@
 #define FRE3NDER_SYSTEM_PANEL_H
 
 #include "lvgl/lvgl.h"
+#include "timezone_panel.h"
 
 #include <atomic>
 #include <mutex>
@@ -21,7 +22,9 @@ class SystemPanel {
   void refresh();
   void poll();
 
+  TimezonePanel timezone_panel;
   lv_obj_t *cont;
+  lv_obj_t *timezone_btn;
   lv_obj_t *back_btn;
   lv_obj_t *refresh_btn;
   lv_obj_t *info_label;

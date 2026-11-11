@@ -18,10 +18,25 @@ import signal
 import socketserver
 import stat
 import time
+from zoneinfo import available_timezones
 
 ROUTE = "/fre3nder/api/v1/system/details"
 APPS_PREFIX = "/fre3nder/api/v1/apps/"
 STARTED = time.monotonic()
+TIMEZONE_ROUTE = "/fre3nder/api/v1/system/timezone"
+TIMEZONE_SUPPORTED = os.environ.get("FRE3NDERSCREEN_MOCK_TIMEZONE_UNSUPPORTED") != "1"
+# Simulator-only catalog from the container's system IANA data; no platform writes.
+TIMEZONES = sorted(name for name in available_timezones()
+                   if "/" in name and not name.startswith(("posix/", "right/")))
+CONFIGURED_TIMEZONE = "Etc/UTC"
+
+
+def timezone_snapshot(catalog=False):
+    state = {"active": "Etc/UTC", "configured": CONFIGURED_TIMEZONE,
+             "reboot_required": CONFIGURED_TIMEZONE != "Etc/UTC"}
+    if catalog:
+        state["available"] = TIMEZONES
+    return {"api_version": 1, "ok": True, "operation": "system-timezone", "timezone": state}
 
 
 def system_snapshot():
@@ -447,6 +462,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if self.path == TIMEZONE_ROUTE and TIMEZONE_SUPPORTED:
+            self.send_json(200, timezone_snapshot(catalog=True))
+            return
         if self.path == BACKUP_PREFIX + "status":
             self.send_json(200, {"api_version": 1, "ok": True,
                                 "operation": "backup-status", "backup": BACKUP.overview()})
@@ -472,6 +490,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
                                  "error": {"code": "not-found"}})
 
     def do_POST(self):
+        global CONFIGURED_TIMEZONE
+        if self.path == TIMEZONE_ROUTE and not TIMEZONE_SUPPORTED:
+            self.send_json(404, {"api_version": 1, "ok": False, "error": {"code": "not-found"}})
+            return
+        if self.path == TIMEZONE_ROUTE and TIMEZONE_SUPPORTED:
+            try:
+                length = int(self.headers.get("Content-Length", "-1"))
+                if not 0 < length <= 256 or self.headers.get_content_type() != "application/json":
+                    raise ValueError("invalid body")
+                payload = json.loads(self.rfile.read(length))
+                if not isinstance(payload, dict) or set(payload) != {"timezone"} or payload["timezone"] not in TIMEZONES:
+                    raise ValueError("invalid timezone")
+            except (ValueError, UnicodeError):
+                self.send_json(400, {"api_version": 1, "ok": False,
+                                    "error": {"code": "invalid-timezone", "message": "Select an installed IANA timezone"}})
+                return
+            CONFIGURED_TIMEZONE = payload["timezone"]
+            self.send_json(200, timezone_snapshot())
+            return
         if self.path == BACKUP_PREFIX + "create":
             try:
                 length = int(self.headers.get("Content-Length", "-1"))

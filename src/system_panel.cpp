@@ -182,6 +182,7 @@ void button_style(lv_obj_t *object)
 
 SystemPanel::SystemPanel()
   : cont(lv_obj_create(lv_screen_active()))
+  , timezone_btn(nullptr)
   , back_btn(nullptr)
   , refresh_btn(nullptr)
   , info_label(nullptr)
@@ -235,6 +236,16 @@ SystemPanel::SystemPanel()
   lv_obj_align(content, LV_ALIGN_BOTTOM_MID, 0, 0);
   lv_obj_set_height(content, lv_display_get_vertical_resolution(NULL) - 58);
   lv_obj_set_scrollable(content, true);
+  lv_obj_set_flex_flow(content, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_style_pad_row(content, 12, 0);
+  timezone_btn = lv_button_create(content);
+  button_style(timezone_btn);
+  lv_obj_set_size(timezone_btn, LV_PCT(100), 42);
+  lv_obj_add_event_cb(timezone_btn, event_callback, LV_EVENT_CLICKED, this);
+  lv_obj_t *timezone_text = lv_label_create(timezone_btn);
+  lv_label_set_text(timezone_text, "Timezone");
+  lv_obj_set_style_text_color(timezone_text, lv_color_hex(CYAN), 0);
+  lv_obj_center(timezone_text);
   info_label = lv_label_create(content);
   lv_obj_set_width(info_label, LV_PCT(100));
   lv_label_set_long_mode(info_label, LV_LABEL_LONG_MODE_WRAP);
@@ -296,6 +307,7 @@ void SystemPanel::event_callback(lv_event_t *event)
   lv_obj_t *target = lv_event_get_current_target_obj(event);
   if (target == self->back_btn) lv_obj_move_to_index(self->cont, 0);
   if (target == self->refresh_btn) self->refresh();
+  if (target == self->timezone_btn) self->timezone_panel.foreground();
 }
 
 void SystemPanel::timer_callback(lv_timer_t *timer)

@@ -16,6 +16,10 @@ class ManagementClient {
 
   static Response system_details(const std::string &socket_path =
       "/run/fre3nder-management/api.sock");
+  static Response timezone_status(const std::string &socket_path =
+      "/run/fre3nder-management/api.sock");
+  static Response timezone_save(const std::string &json_body, const std::string &socket_path =
+      "/run/fre3nder-management/api.sock");
   static Response apps_status(const std::string &socket_path =
       "/run/fre3nder-management/api.sock");
   static Response app_detail(const std::string &name, const std::string &socket_path =

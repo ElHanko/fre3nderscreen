@@ -28,6 +28,9 @@ class SimulatorManagementTests(unittest.TestCase):
             stderr=subprocess.PIPE,
         )
         self.addCleanup(self.stop)
+        self.wait_for_mock()
+
+    def wait_for_mock(self):
         for _ in range(100):
             if self.sock_path.is_socket():
                 try:
@@ -76,6 +79,38 @@ class SimulatorManagementTests(unittest.TestCase):
         self.assertEqual(int(headers[b"Content-Length"]), len(body))
         self.assertEqual(headers[b"Content-Type"], b"application/json; charset=utf-8")
         return status, json.loads(body)
+
+    def test_timezone_catalog_selection_and_deferred_activation(self):
+        route = "/fre3nder/api/v1/system/timezone"
+        status, response = self.request("GET", route)
+        self.assertEqual(status, 200)
+        state = response["timezone"]
+        self.assertEqual(state["configured"], "Etc/UTC")
+        self.assertFalse(state["reboot_required"])
+        self.assertIn("America/Indiana/Indianapolis", state["available"])
+        status, response = self.request("POST", route, json.dumps({"timezone": "America/Indiana/Indianapolis"}))
+        self.assertEqual(status, 200)
+        self.assertEqual(response["timezone"], {"active": "Etc/UTC", "configured": "America/Indiana/Indianapolis", "reboot_required": True})
+        status, response = self.request("GET", route)
+        self.assertTrue(response["timezone"]["reboot_required"])
+        self.assertEqual(response["timezone"]["configured"], "America/Indiana/Indianapolis")
+        for payload in ({"timezone": "../etc/passwd"}, {"timezone": "Unknown/Place"}, {}, {"timezone": "Etc/UTC", "extra": 1}):
+            self.assertEqual(self.request("POST", route, json.dumps(payload))[0], 400)
+        status, response = self.request("POST", route, '{"timezone":"Etc/UTC"}')
+        self.assertFalse(response["timezone"]["reboot_required"])
+
+    def test_timezone_older_core_support_is_absent_without_affecting_system(self):
+        self.stop()
+        self.process = subprocess.Popen(
+            [sys.executable, str(MOCK), "--socket", str(self.sock_path)],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+            env={**os.environ, "FRE3NDERSCREEN_MOCK_TIMEZONE_UNSUPPORTED": "1"},
+        )
+        self.wait_for_mock()
+        route = "/fre3nder/api/v1/system/timezone"
+        self.assertEqual(self.request("GET", route)[0], 404)
+        self.assertEqual(self.request("POST", route, '{"timezone":"Etc/UTC"}')[0], 404)
+        self.assertEqual(self.request("GET", ROUTE)[0], 200)
 
     def test_backup_api_receipts_and_role_target_validation(self):
         prefix = "/fre3nder/api/v1/backup/"

@@ -21,6 +21,20 @@ from `Fre3nderScreenPanel` (UI-local preferences and self restart).
 `ManagementClient` sends HTTP/JSON requests over the existing Core Unix socket;
 System, Apps, OTA and Backup pages display results without implementing platform policy.
 
+System → Timezone uses `GET/POST /fre3nder/api/v1/system/timezone` through the
+same protected Unix peer. Two dropdowns derive regions and complete location
+suffixes from Core's installed IANA catalog, including multi-level names such
+as `America/Indiana/Indianapolis`. The page preselects the configured value,
+shows the active value and restart requirement, and sends only the selected
+identifier as JSON. Core validates and atomically stores the Root-managed
+`/home/.fre3nder/system/timezone`, which survives OTA and SYS reset.
+Core's S45 activates it at boot, with `Etc/UTC` as fallback. Screen never reads
+or writes timezone files and carries no timezone list. Core keeps UTC/NTP
+behavior, with no RTC or substitute clock; offline IANA rules do not make an
+unsynchronized clock accurate. An older Core's `404` disables the controls with
+an explicit message. A safe general reboot API is still missing, so the page
+asks the user to restart later when idle and never calls the OTA reboot route.
+
 The More → Tune page contains Fine Tune, Limits, Bed Mesh and Power. Unsupported
 Guppy calibration/TMC dialogs have been removed; see [the audit](RELEASE-2026.2.md).
 Configured Load/Unload commands are enabled from `printer.gcode.help` results.
@@ -125,6 +139,18 @@ The integration tests start only the synthetic Management mock over temporary
 Unix sockets. The C++ tests in `tests/` require compilation and therefore a
 separate build authorization. Static checks and fixture tests cannot establish
 that the application compiles or that a page works on hardware.
+
+`tests/test_timezone_panel.cpp` exercises the actual LVGL dropdown selection,
+preselection, complete multi-level identifier sent over Unix HTTP, deferred
+activation and older-Core response. After an authorized simulator build it can
+be compiled and run with a **separate explicit build authorization**:
+
+```sh
+g++ -std=c++17 -DSIMULATOR -DLV_DISABLE_API_MAPPING -I. -Ilibhv/include \
+  tests/test_timezone_panel.cpp src/timezone_panel.cpp src/management_client.cpp \
+  lvgl/build/liblvgl.a -pthread -lSDL2 -lm -o /tmp/fre3nderscreen-timezone-test
+/tmp/fre3nderscreen-timezone-test
+```
 
 After an authorized simulator build, test the changed Tune navigation, command
 availability in Extrude and explicit LED fixture, then check System, Apps and

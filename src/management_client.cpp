@@ -73,6 +73,19 @@ ManagementClient::Response ManagementClient::apps_status(const std::string &sock
   return request("GET", std::string(PREFIX) + "status", {}, {}, socket_path);
 }
 
+ManagementClient::Response ManagementClient::timezone_status(const std::string &socket_path)
+{
+  return request("GET", "/fre3nder/api/v1/system/timezone", {}, {}, socket_path);
+}
+
+ManagementClient::Response ManagementClient::timezone_save(const std::string &json_body,
+    const std::string &socket_path)
+{
+  if (json_body.empty() || json_body.size() > 256)
+    return failure("Invalid timezone operation body");
+  return request("POST", "/fre3nder/api/v1/system/timezone", json_body, {}, socket_path);
+}
+
 ManagementClient::Response ManagementClient::app_detail(const std::string &name, const std::string &socket_path)
 {
   if (!valid_app_name(name)) return failure("Invalid application name");

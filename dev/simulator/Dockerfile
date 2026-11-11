@@ -13,6 +13,7 @@ RUN apt-get update \
         novnc \
         python3-aiohttp \
         rsync \
+        tzdata \
         websockify \
         x11vnc \
         xvfb \
