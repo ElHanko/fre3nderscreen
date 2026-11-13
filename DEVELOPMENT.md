@@ -71,7 +71,9 @@ hardfloat linkage/ABI. Do not reuse simulator output as a target artifact.
 The application Makefile accepts:
 
 - `CROSS_COMPILE`: target compiler prefix; unset selects the SDL simulator.
-- `FRE3NDERSCREEN_VERSION`: version displayed in the UI; otherwise `dev-snapshot`.
+- `FRE3NDERSCREEN_VERSION`: version displayed in the UI. A standalone build
+  defaults to [`VERSION`](VERSION); Fre3nder supplies the pinned release or
+  the development identity `YEAR.SERIES.<screen-commit>` for target builds.
 
 The native Linux-fbdev display is 480×272 XRGB8888, rotated with
 `LV_DISPLAY_ROTATION_90` to the logical 272×480 UI. Native evdev retains the

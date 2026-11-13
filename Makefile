@@ -50,6 +50,7 @@ ASSET_DIR		= material_46
 
 CSRCS 			+= $(wildcard $(LVGL_DIR)/assets/$(ASSET_DIR)/*.c)
 
+FRE3NDERSCREEN_VERSION ?= $(strip $(file <VERSION))
 ifdef FRE3NDERSCREEN_VERSION
 DEFINES			+= -D FRE3NDERSCREEN_VERSION="\"${FRE3NDERSCREEN_VERSION}\""
 endif
