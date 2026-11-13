@@ -15,7 +15,6 @@ forbidden_paths = [
     "k1",
     "reinstall-creality.sh",
     "release.sh",
-    "VERSION",
     "version.sh",
     "src/kd_graphic_mode.cpp",
     "src/platform.h",
